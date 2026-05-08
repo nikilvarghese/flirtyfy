@@ -18,3 +18,7 @@ web-build/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+.env
+node_modules
+dist
+.expo
