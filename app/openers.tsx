@@ -15,7 +15,7 @@ export default function OpenersScreen() {
 
   async function generate() {
     setLoading(true)
-    const generation = await generateDatingCopy({ kind: 'opener', input, tone, persona, count: 8 })
+    const generation = await generateDatingCopy({ kind: 'opener', input, tone, persona })
     addGeneration(generation)
     setLoading(false)
     router.push({ pathname: '/results', params: { id: generation.id } })

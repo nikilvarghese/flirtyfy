@@ -142,57 +142,12 @@ function RootLayout() {
   }, [navigationRef])
 
   useEffect(() => {
-    // Configure RevenueCat once at startup, before any user is known
+    // Configure RevenueCat once at startup
     configureRevenueCat()
-
-    if (!isSupabaseEnabled) {
-      // No credentials — stay on landing page, no errors thrown
-      setIsAuthed(false)
-      return
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthed(!!session)
-      if (session?.user) {
-        setOnboardingCompleted(session.user.user_metadata?.onboarding_completed === true)
-        loginRevenueCat(session.user.id)
-        identify(
-          session.user.id,
-          session.user.email ? { email: session.user.email } : undefined
-        )
-      } else {
-        setOnboardingCompleted(null)
-      }
-    }).catch(() => {
-      console.warn('[Auth] Could not reach Supabase — defaulting to signed-out state.')
-      setIsAuthed(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setIsAuthed(true)
-        setOnboardingCompleted(session.user.user_metadata?.onboarding_completed === true)
-        loginRevenueCat(session.user.id)
-        identify(
-          session.user.id,
-          session.user.email ? { email: session.user.email } : undefined
-        )
-      }
-      if (event === 'SIGNED_OUT') {
-        setIsAuthed(false)
-        setOnboardingCompleted(null)
-        logoutRevenueCat()
-        resetIdentity()
-      }
-      if (event === 'USER_UPDATED' && session?.user) {
-        setOnboardingCompleted(session.user.user_metadata?.onboarding_completed === true)
-      }
-      if (event === 'TOKEN_REFRESHED' && session?.user) {
-        setOnboardingCompleted(session.user.user_metadata?.onboarding_completed === true)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    
+    // Always authenticated
+    setIsAuthed(true)
+    setOnboardingCompleted(true)
   }, [])
 
   useEffect(() => {
@@ -236,14 +191,8 @@ function RootLayout() {
                         the first accessible authenticated screen. */}
                         {/* <Stack.Protected guard={!isAuthed}> */}
                           <Stack.Screen name="index" />
-                          <Stack.Screen name="(auth)" />
                         {/* </Stack.Protected> */}
 
-                        {/* ── Onboarding screens ───────────────────────────────────────
-                        Shown when signed in but onboarding not yet completed. */}
-                        {/* <Stack.Protected guard={!!isAuthed && onboardingCompleted === false}> */}
-                          <Stack.Screen name="(onboarding)" />
-                        {/* </Stack.Protected> */}
 
                         {/* ── Authenticated screens ────────────────────────────────────
                         Accessible only when signed in + onboarding done. */}

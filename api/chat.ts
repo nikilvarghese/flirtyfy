@@ -10,15 +10,6 @@ const DEFAULT_MODELS = [
     'meta-llama/llama-3.1-70b-instruct',
 ]
 
-const FALLBACK_REPLIES = [
-    "you’re getting confident now huh",
-    "dangerous behavior honestly",
-    "not gonna lie that was smooth",
-    "i’ll pretend i didn’t like that",
-    "you always this bold?",
-    "that was actually kinda good",
-]
-
 function setCors(res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET')
@@ -43,11 +34,6 @@ function parseModels(): string[] {
         .filter(Boolean)
 
     return models.length ? models : DEFAULT_MODELS
-}
-
-function randomFallbackReplies() {
-    const shuffled = [...FALLBACK_REPLIES].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 3)
 }
 
 function cleanReplies(text: string): string[] {
@@ -407,8 +393,8 @@ async function callOpenRouter({
         if (!replies.length) {
             return {
                 ok: true,
-                replies: randomFallbackReplies(),
-                fallback: true,
+                replies: [],
+                fallback: false,
                 model,
             }
         }
@@ -571,9 +557,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             errors
         )
 
-        return res.status(200).json({
-            replies: randomFallbackReplies(),
-            fallback: true,
+        return res.status(503).json({
+            error: 'AI service exhausted or currently unavailable',
             degraded: true,
             requestId,
         })

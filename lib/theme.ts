@@ -27,6 +27,8 @@ export const BG = '#09070b'
 export const SURFACE = '#151016'
 export const SURFACE2 = '#211720'
 export const SURFACE3 = '#2d2029'
+export const CARD_BG = 'rgba(18,18,22,0.92)'
+export const BORDER_COLOR = 'rgba(255,255,255,0.06)'
 
 // ── Text ──────────────────────────────────────────────────────────────────────
 export const TEXT_PRIMARY = '#ffffff'

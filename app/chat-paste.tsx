@@ -16,7 +16,7 @@ export default function ChatPasteScreen() {
 
   async function generate() {
     setLoading(true)
-    const generation = await generateDatingCopy({ kind: 'reply', input, tone, persona, count: 8 })
+    const generation = await generateDatingCopy({ kind: 'reply', input, tone, persona })
     addGeneration(generation)
     setLoading(false)
     router.push({ pathname: '/results', params: { id: generation.id } })

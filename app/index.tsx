@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -8,6 +9,10 @@ import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
 import { ACCENT, BG, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 export default function LandingScreen() {
+  useEffect(() => {
+    router.replace('/(tabs)')
+  }, [])
+
   return (
     <View style={s.root}>
       <LinearGradient colors={[BG, '#1c0b13', BG]} style={StyleSheet.absoluteFillObject} />
@@ -24,7 +29,7 @@ export default function LandingScreen() {
           <View style={s.row}><MessageCircleHeart size={18} color={ACCENT} /><Text style={s.cardText}>Generate 3-10 replies</Text></View>
           <View style={s.row}><Sparkles size={18} color={ACCENT} /><Text style={s.cardText}>Openers, bios, personas</Text></View>
         </GlowCard>
-        <GradientButton label="Continue with email" onPress={() => router.push('/login')} />
+        <GradientButton label="Get Started" onPress={() => router.push('/(tabs)')} />
         <Pressable onPress={() => router.push('/privacy')} style={s.legal}>
           <Text style={s.legalText}>Privacy-first AI dating assistant</Text>
         </Pressable>

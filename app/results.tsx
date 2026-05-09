@@ -1,5 +1,6 @@
-import { Alert, Pressable, Share, StyleSheet, View } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { useState } from 'react'
+import { Alert, Pressable, Share, StyleSheet, View, ActivityIndicator } from 'react-native'
+import { useLocalSearchParams, router } from 'expo-router'
 import { Copy, Heart, RefreshCcw } from 'lucide-react-native'
 import { Text } from '@/components/ui/Text'
 import { GradientButton, ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
@@ -11,11 +12,27 @@ export default function ResultsScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const { history, toggleFavorite, addGeneration, persona, tone } = useFlirtyfy()
   const generation = history.find((item) => item.id === id) ?? history[0]
+  const [loading, setLoading] = useState(false)
 
   async function regenerate() {
-    if (!generation) return
-    const next = await generateDatingCopy({ kind: generation.kind, input: generation.input, tone, persona, count: 8 })
-    addGeneration(next)
+    if (!generation || loading) return
+    setLoading(true)
+    try {
+      const previousReplies = generation.suggestions.map(s => s.reply)
+      const next = await generateDatingCopy({ 
+        kind: generation.kind, 
+        input: generation.input, 
+        tone, 
+        persona, 
+        previousReplies 
+      })
+      addGeneration(next)
+      router.setParams({ id: next.id })
+    } catch (err: any) {
+      Alert.alert('Generation failed', err.message || 'Please try again later.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -40,10 +57,13 @@ export default function ResultsScreen() {
               </View>
             </View>
           ))}
-          <GradientButton label="Regenerate set" onPress={regenerate} />
+          <GradientButton label={loading ? 'Regenerating...' : 'Regenerate set'} onPress={regenerate} disabled={loading} />
         </>
       )}
-      <Pressable onPress={regenerate} style={s.regen}><RefreshCcw size={14} color={TEXT_TERTIARY} /><Text style={s.body}>Try a different read of the vibe</Text></Pressable>
+      <Pressable onPress={regenerate} style={[s.regen, loading && { opacity: 0.5 }]} disabled={loading}>
+        {loading ? <ActivityIndicator size="small" color={TEXT_TERTIARY} /> : <RefreshCcw size={14} color={TEXT_TERTIARY} />}
+        <Text style={s.body}>{loading ? 'Writing new options...' : 'Try a different read of the vibe'}</Text>
+      </Pressable>
     </ScreenShell>
   )
 }

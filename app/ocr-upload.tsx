@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Image, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Image, Platform, StyleSheet, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
 import { Text } from '@/components/ui/Text'
@@ -23,14 +23,25 @@ export default function OcrUploadScreen() {
     if (!uri) return
     setImage(uri)
     setLoading(true)
-    const extracted = await extractChatTextFromImage(uri)
-    setText(extracted)
-    setLoading(false)
+    try {
+      const extracted = await extractChatTextFromImage(uri)
+      setText(extracted)
+    } catch (error: any) {
+      console.error('[OCR Screen] Extraction error:', error.message)
+      if (Platform.OS === 'web') {
+        alert(`OCR Failed: ${error.message}`)
+      } else {
+        // Fallback for native if Alert is used elsewhere
+        console.error(error)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function generate() {
     setLoading(true)
-    const generation = await generateDatingCopy({ kind: 'reply', input: text, tone, persona, count: 8 })
+    const generation = await generateDatingCopy({ kind: 'reply', input: text, tone, persona })
     addGeneration(generation)
     setLoading(false)
     router.push({ pathname: '/results', params: { id: generation.id } })

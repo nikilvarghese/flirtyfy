@@ -17,7 +17,7 @@ export default function BioWriterScreen() {
 
   async function generate() {
     setLoading(true)
-    const generation = await generateDatingCopy({ kind: 'bio', input, tone, persona, count: 6 })
+    const generation = await generateDatingCopy({ kind: 'bio', input, tone, persona })
     addGeneration(generation)
     setLoading(false)
     router.push({ pathname: '/results', params: { id: generation.id } })

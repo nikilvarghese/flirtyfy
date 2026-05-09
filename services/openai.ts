@@ -11,93 +11,66 @@ type GenerateArgs = {
   input: string
   tone: Tone
   persona: Persona
-  count?: number
+  previousReplies?: string[]
 }
 
-const fallbackCopy: Record<GenerationKind, string[]> = {
-  reply: [
-    'Careful, that almost sounded like you were trying to make me smile.',
-    'I was going to play it cool, but that message made it harder.',
-    'That depends. Are you always this charming or am I getting the premium version?',
-  ],
-  opener: [
-    'Mini golf and espresso martinis is a suspiciously strong personality combo. What is the origin story?',
-    'You seem like the type to have one excellent hidden-gem movie rec. I am listening.',
-    'Late night drives plus indie movies feels like a main-character weekend. When are we filming it?',
-  ],
-  bio: [
-    'Equal parts soft launch and plot twist. Good taste in coffee, questionable confidence at mini golf.',
-    'Looking for chemistry, good lighting, and someone who can pick a dinner spot without forming a committee.',
-    'Calm energy, sharp jokes, strong opinions on playlists. Bonus points if you flirt like an adult.',
-  ],
-  ocr: [
-    'Them: so am I boring?\nMe: Not yet. You still have time to surprise me.',
-  ],
-}
-
-function buildPrompt({ kind, input, tone, persona, count = 6 }: GenerateArgs) {
-  return [
-    'You are Flirtyfy, a premium AI dating message assistant.',
-    'Write human, emotionally intelligent dating-app copy. Avoid cringe, robotic wording, therapy-speak, and long paragraphs.',
-    `Task: ${kind}. Tone: ${tone}. Persona: ${persona}.`,
-    `Return JSON only: [{"tone":"${tone.toLowerCase()}","reply":"short message","reason":"why it works"}].`,
-    `Generate ${count} options. Each reply should be copy-ready, confident, short-form texting style, and never manipulative or explicit.`,
-    `Input:\n${input}`,
-  ].join('\n\n')
-}
-
-function normalizeSuggestions(raw: unknown, kind: GenerationKind, tone: Tone): Suggestion[] {
-  if (Array.isArray(raw)) {
-    return raw.slice(0, 10).map((item: any, index) => ({
-      id: `${Date.now()}-${index}`,
-      tone: String(item?.tone ?? tone),
-      reply: String(item?.reply ?? item?.text ?? fallbackCopy[kind][index % fallbackCopy[kind].length]),
-      reason: item?.reason ? String(item.reason) : undefined,
-    }))
-  }
-
-  return fallbackCopy[kind].map((reply, index) => ({
-    id: `${Date.now()}-${index}`,
+function normalizeSuggestions(replies: string[], tone: Tone): Suggestion[] {
+  if (!Array.isArray(replies)) return []
+  
+  return replies.map((reply, index) => ({
+    id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 5)}`,
     tone,
-    reply,
-    reason: 'Demo-safe fallback while backend is not configured.',
+    reply: reply.trim(),
   }))
 }
 
 export async function generateDatingCopy(args: GenerateArgs): Promise<Generation> {
+  console.log(`[AI] Starting generation: kind=${args.kind}, tone=${args.tone}, persona=${args.persona}`)
   track('generation_started' as any, { kind: args.kind, tone: args.tone, persona: args.persona })
+
+  if (!BACKEND_URL) {
+    throw new Error('Backend URL is not configured (EXPO_PUBLIC_BACKEND_URL)')
+  }
 
   let suggestions: Suggestion[]
   try {
-    if (!BACKEND_URL) {
-      console.warn('[AI] EXPO_PUBLIC_BACKEND_URL not set - using fallbacks.')
-      suggestions = normalizeSuggestions(null, args.kind, args.tone)
-    } else {
-      const response = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'Return a JSON object with an "items" array only.' },
-            { role: 'user', content: buildPrompt(args) },
-          ],
-        }),
-      })
-
-      if (!response.ok) throw new Error(`Backend request failed: ${response.status}`)
-      const json = await response.json()
-      const content = json.choices?.[0]?.message?.content ?? '{"items":[]}'
-      const parsed = JSON.parse(content)
-      suggestions = normalizeSuggestions(parsed.items ?? parsed, args.kind, args.tone)
+    const payload = {
+      conversation: args.input,
+      tone: args.tone.toLowerCase(),
+      previousReplies: args.previousReplies,
+      refinement: args.persona ? `Persona: ${args.persona}` : undefined
     }
-  } catch (error) {
+
+    console.log('[AI] Fetching from backend:', `${BACKEND_URL}/api/chat`, JSON.stringify(payload, null, 2))
+
+    const response = await fetch(`${BACKEND_URL}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[AI] Backend error:', response.status, errorText)
+      throw new Error(`Backend request failed: ${response.status} - ${errorText}`)
+    }
+
+    const json = await response.json()
+    console.log('[AI] Backend response received:', JSON.stringify(json, null, 2))
+
+    if (!json.replies || !Array.isArray(json.replies)) {
+      console.error('[AI] Invalid response format:', json)
+      throw new Error('Invalid response format from backend: "replies" array expected')
+    }
+
+    suggestions = normalizeSuggestions(json.replies, args.tone)
+  } catch (error: any) {
+    console.error('[AI] Generation failed:', error.message)
     Sentry.captureException(error)
-    track('generation_failed' as any, { kind: args.kind })
-    suggestions = normalizeSuggestions(null, args.kind, args.tone)
+    track('generation_failed' as any, { kind: args.kind, error: error.message })
+    throw error
   }
 
   const generation: Generation = {
@@ -138,21 +111,32 @@ export async function generateDatingCopy(args: GenerateArgs): Promise<Generation
 }
 
 export async function extractChatTextFromImage(uri: string): Promise<string> {
+  console.log('[AI] Starting OCR extraction for image:', uri.slice(0, 50) + '...')
   track('ocr_started' as any)
+
   if (!BACKEND_URL) {
-    return "Them: you are kind of hard to read\nMe: maybe you need better lighting\nThem: or maybe coffee?"
+    throw new Error('Backend URL is not configured (EXPO_PUBLIC_BACKEND_URL)')
   }
 
   try {
-    const response = await fetch(uri)
-    const blob = await response.blob()
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      reader.onerror = reject
-      reader.onloadend = () => resolve(String(reader.result))
-      reader.readAsDataURL(blob)
-    })
+    let dataUrl: string = uri
 
+    // If it's not already a data URL, we need to fetch it and convert it
+    if (!uri.startsWith('data:')) {
+      console.log('[AI] Fetching image from URI...')
+      const response = await fetch(uri)
+      const blob = await response.blob()
+      
+      console.log('[AI] Converting image blob to dataURL...')
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = reject
+        reader.onloadend = () => resolve(String(reader.result))
+        reader.readAsDataURL(blob)
+      })
+    }
+
+    console.log('[AI] Sending OCR request to backend:', `${BACKEND_URL}/api/ocr`)
     const result = await fetch(`${BACKEND_URL}/api/ocr`, {
       method: 'POST',
       headers: {
@@ -169,13 +153,23 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
         }],
       }),
     })
-    if (!result.ok) throw new Error(`OCR request failed: ${result.status}`)
+
+    if (!result.ok) {
+      const errorText = await result.text()
+      console.error('[AI] OCR Backend Error:', result.status, errorText)
+      throw new Error(`OCR backend returned ${result.status}: ${errorText}`)
+    }
+
     const json = await result.json()
+    console.log('[AI] OCR response received')
+    
+    const extractedText = json.choices?.[0]?.message?.content?.trim() ?? ''
     track('ocr_completed' as any)
-    return json.choices?.[0]?.message?.content?.trim() ?? ''
-  } catch (error) {
+    return extractedText
+  } catch (error: any) {
+    console.error('[AI] OCR Failure Details:', error.message)
     Sentry.captureException(error)
     track('ocr_failed' as any)
-    return ''
+    throw error // Re-throw to allow the UI to catch the specific message
   }
 }
