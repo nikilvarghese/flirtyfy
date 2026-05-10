@@ -16,7 +16,7 @@ type GenerateArgs = {
 
 function normalizeSuggestions(replies: string[], tone: Tone): Suggestion[] {
   if (!Array.isArray(replies)) return []
-  
+
   return replies.map((reply, index) => ({
     id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 5)}`,
     tone,
@@ -126,7 +126,7 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
       console.log('[AI] Fetching image from URI...')
       const response = await fetch(uri)
       const blob = await response.blob()
-      
+
       console.log('[AI] Converting image blob to dataURL...')
       dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
@@ -143,14 +143,7 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Extract dating chat text in order. Clean timestamps and UI chrome. Return plain text only.' },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ],
-        }],
+        image: dataUrl,
       }),
     })
 
@@ -162,8 +155,8 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
 
     const json = await result.json()
     console.log('[AI] OCR response received')
-    
-    const extractedText = json.choices?.[0]?.message?.content?.trim() ?? ''
+
+    const extractedText = json.text?.trim() ?? ''
     track('ocr_completed' as any)
     return extractedText
   } catch (error: any) {
