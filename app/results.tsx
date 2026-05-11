@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Pressable, Share, StyleSheet, View, ActivityIndicator } from 'react-native'
+import { Alert, Pressable, Clipboard, StyleSheet, View, ActivityIndicator } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Copy, Heart, RefreshCcw } from 'lucide-react-native'
 import { Text } from '@/components/ui/Text'
@@ -19,12 +19,12 @@ export default function ResultsScreen() {
     setLoading(true)
     try {
       const previousReplies = generation.suggestions.map(s => s.reply)
-      const next = await generateDatingCopy({ 
-        kind: generation.kind, 
-        input: generation.input, 
-        tone, 
-        persona, 
-        previousReplies 
+      const next = await generateDatingCopy({
+        kind: generation.kind,
+        input: generation.input,
+        tone,
+        persona,
+        previousReplies
       })
       addGeneration(next)
       router.setParams({ id: next.id })
@@ -52,7 +52,12 @@ export default function ResultsScreen() {
               <Text style={s.reply}>{item.reply}</Text>
               {item.reason ? <Text style={s.body}>{item.reason}</Text> : null}
               <View style={s.actions}>
-                <Pressable onPress={() => Share.share({ message: item.reply }).catch(() => Alert.alert('Ready to copy', item.reply))} style={s.iconBtn}><Copy size={16} color={ACCENT} /><Text style={s.iconText}>Copy</Text></Pressable>
+                <Pressable
+                  onPress={() => {
+                    Clipboard.setString(item.reply)
+                  }}
+                  style={s.iconBtn}
+                ><Copy size={16} color={ACCENT} /><Text style={s.iconText}>Copy</Text></Pressable>
                 <Pressable onPress={() => toggleFavorite(generation)} style={s.iconBtn}><Heart size={16} color={ACCENT} /><Text style={s.iconText}>Favorite</Text></Pressable>
               </View>
             </View>

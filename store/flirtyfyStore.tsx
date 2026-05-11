@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { Generation, Persona, Tone } from '@/types/flirtyfy'
 
 const HISTORY_KEY = '@flirtyfy_history'
-const FAVORITES_KEY = '@flirtyfy_favorites'
 
 type FlirtyfyState = {
   persona: Persona
@@ -32,9 +31,19 @@ export function FlirtyfyProvider({ children }: { children: React.ReactNode }) {
     const loadData = async () => {
       try {
         const storedHistory = await AsyncStorage.getItem(HISTORY_KEY)
-        const storedFavorites = await AsyncStorage.getItem(FAVORITES_KEY)
-        if (storedHistory) setHistory(JSON.parse(storedHistory))
-        if (storedFavorites) setFavorites(JSON.parse(storedFavorites))
+        if (storedHistory) {
+          const parsedHistory =
+            JSON.parse(storedHistory)
+
+          setHistory(parsedHistory)
+
+          setFavorites(
+            parsedHistory.filter(
+              (item: Generation) =>
+                item.favorite
+            )
+          )
+        }
       } catch (e) {
         console.error('Failed to load storage', e)
       }
@@ -47,10 +56,6 @@ export function FlirtyfyProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history))
   }, [history])
 
-  useEffect(() => {
-    AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
-  }, [favorites])
-
   const value = useMemo<FlirtyfyState>(() => ({
     persona,
     tone,
@@ -59,30 +64,62 @@ export function FlirtyfyProvider({ children }: { children: React.ReactNode }) {
     setPersona,
     setTone,
     addGeneration: (generation) => {
-      setHistory((current) => [generation, ...current])
+      setHistory((current) => [
+        {
+          ...generation,
+          favorite: false,
+        },
+        ...current,
+      ])
     },
     removeGeneration: (id) => {
-      setHistory((current) => current.filter((item) => item.id !== id))
+      setHistory((current) =>
+        current.filter(
+          (item) => item.id !== id
+        )
+      )
+
+      setFavorites((current) =>
+        current.filter(
+          (item) => item.id !== id
+        )
+      )
     },
     removeGenerations: (ids) => {
-      setHistory((current) => current.filter((item) => !ids.includes(item.id)))
+      setHistory((current) =>
+        current.filter(
+          (item) => !ids.includes(item.id)
+        )
+      )
+
+      setFavorites((current) =>
+        current.filter(
+          (item) => !ids.includes(item.id)
+        )
+      )
     },
     clearHistory: () => {
       setHistory([])
+      setFavorites([])
     },
     toggleFavorite: (generation) => {
-      setFavorites((current) => {
-        const exists = current.some((item) => item.id === generation.id)
-        if (exists) {
-          return current.filter((item) => item.id !== generation.id)
-        } else {
-          return [{ ...generation, favorite: true }, ...current]
-        }
-      })
-      // Update favorite status in history too
-      setHistory((current) => current.map(item => 
-        item.id === generation.id ? { ...item, favorite: !item.favorite } : item
-      ))
+      const updatedHistory = history.map((item) =>
+        item.id === generation.id
+          ? {
+            ...item,
+            favorite: !item.favorite,
+          }
+          : item
+      )
+
+      setHistory(updatedHistory)
+
+      const updatedFavorites =
+        updatedHistory.filter(
+          (item) => item.favorite
+        )
+
+      setFavorites(updatedFavorites)
     },
   }), [persona, tone, history, favorites])
 
