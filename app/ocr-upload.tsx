@@ -70,7 +70,7 @@ export default function OcrUploadScreen() {
 
   function switchTone(nextTone: Tone) {
     setTone(nextTone)
-    if (nextTone !== tone) showToast(`Tone switched to ${nextTone}`, 'info')
+    if (nextTone !== tone) showToast(`Tone switched to ${nextTone}`, 'success')
   }
 
   return (

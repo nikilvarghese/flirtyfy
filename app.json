@@ -45,9 +45,14 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "flirtyfy" }
+            {
+              "scheme": "flirtyfy"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -76,14 +81,14 @@
           "organization": "your-org"
         }
       ],
-      "@sentry/react-native"
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "REPLACE_WITH_YOUR_EAS_PROJECT_ID"
+        "projectId": "182b9087-dda0-4f68-9343-b416d0f116f2"
       }
     },
-    "owner": "REPLACE_WITH_YOUR_EXPO_OWNER"
+    "owner": "nikil.varghese"
   }
 }

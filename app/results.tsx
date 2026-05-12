@@ -107,12 +107,17 @@ export default function ResultsScreen() {
 
   const regenBlock = generation && !isWide ? (
     <Reveal delay={220}>
-      <View style={s.regenPanel}>
-        <View style={{ flex: 1 }}>
+      <View style={s.regenCard}>
+        <View style={s.regenHeader}>
           <Text style={s.regenTitle}>Want another angle?</Text>
-          <Text style={s.regenSub}>Regenerate keeps your conversation context and tries fresh options.</Text>
+          <Text style={s.regenSub}>Fresh options while keeping your context.</Text>
         </View>
-        <GradientButton label={loading ? 'Regenerating...' : 'Regenerate all options'} onPress={regenerate} disabled={loading} />
+        <GradientButton 
+          label={loading ? 'Regenerating...' : 'Regenerate all options'} 
+          onPress={regenerate} 
+          disabled={loading} 
+          style={s.regenButton}
+        />
       </View>
     </Reveal>
   ) : null
@@ -122,14 +127,14 @@ export default function ResultsScreen() {
       {!generation ? (
         <View style={shellStyles.card}><Text style={s.body}>No generation found yet.</Text></View>
       ) : (
-        <>
+        <View style={s.content}>
           {/* Header Meta */}
           <Reveal>
           <View style={s.meta}>
             <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               <View style={s.badge}><Text style={s.badgeText}>{generation.persona}</Text></View>
               <View style={s.badge}><Text style={s.badgeText}>{generation.tone}</Text></View>
-              <View style={[s.badge, { borderColor: 'rgba(255,255,255,0.1)' }]}><Text style={[s.badgeText, { color: TEXT_TERTIARY }]}>{generation.kind}</Text></View>
+              <View style={[s.badge, { borderColor: 'rgba(255,255,255,0.08)' }]}><Text style={[s.badgeText, { color: TEXT_TERTIARY }]}>{generation.kind}</Text></View>
             </View>
             <TactilePressable
               onPress={toggleResultFavorite}
@@ -165,50 +170,51 @@ export default function ResultsScreen() {
               </View>
             </Reveal>
           ) : null}
-        </>
+          
+          {/* Bottom spacing to prevent collision with toast */}
+          <View style={{ height: 40 }} />
+        </View>
       )}
-
-      <Pressable onPress={regenerate} style={[s.regen, loading && { opacity: 0.5 }]} disabled={loading}>
-        {loading ? <ActivityIndicator size="small" color={TEXT_TERTIARY} /> : <RefreshCcw size={14} color={TEXT_TERTIARY} />}
-        <Text style={s.regenText}>{loading ? 'Thinking of new lines...' : 'Not quite right? Try a different read.'}</Text>
-      </Pressable>
     </ScreenShell>
   )
 }
 
 const s = StyleSheet.create({
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
-  desktopContext: { flex: 0.84 },
-  desktopReplies: { flex: 1.18 },
-  favoriteBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: BORDER },
-  badge: { borderWidth: 1, borderColor: 'rgba(255,79,123,0.3)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: ACCENT_DIM },
-  badgeText: { color: ACCENT, fontSize: 12, fontWeight: '800', textTransform: 'capitalize' },
+  content: { paddingBottom: 20 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+  desktopContext: { flex: 0.8 },
+  desktopReplies: { flex: 1.2 },
+  favoriteBtn: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: BORDER },
+  badge: { borderWidth: 1, borderColor: 'rgba(255,79,123,0.25)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: ACCENT_DIM },
+  badgeText: { color: ACCENT, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
 
-  sectionTitle: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, marginTop: 8 },
+  sectionTitle: { color: TEXT_TERTIARY, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12, marginTop: 10 },
 
-  contextCard: { backgroundColor: 'rgba(255,255,255,0.035)', borderColor: 'rgba(255,255,255,0.07)', marginBottom: 18 },
-  contextText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
+  contextCard: { backgroundColor: 'rgba(255,255,255,0.025)', borderColor: 'rgba(255,255,255,0.06)', marginBottom: 24, padding: 18 },
+  contextText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22, fontWeight: '500' },
 
-  replyStack: { gap: 12 },
-  result: { gap: 14, borderColor: ACCENT_BORDER, backgroundColor: SURFACE },
+  replyStack: { gap: 16 },
+  result: { gap: 16, borderColor: ACCENT_BORDER, backgroundColor: SURFACE, padding: 20 },
   resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tone: { color: ACCENT, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  optionNum: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '700', marginTop: 3 },
+  tone: { color: ACCENT, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
+  optionNum: { color: TEXT_TERTIARY, fontSize: 10, fontWeight: '700', marginTop: 3 },
 
-  reply: { color: TEXT_PRIMARY, fontSize: 18, lineHeight: 27, fontWeight: '800' },
-  reason: { color: TEXT_TERTIARY, fontSize: 13, lineHeight: 20, fontStyle: 'italic', paddingTop: 2 },
+  reply: { color: TEXT_PRIMARY, fontSize: 18, lineHeight: 28, fontWeight: '800', letterSpacing: -0.3 },
+  reason: { color: TEXT_TERTIARY, fontSize: 13, lineHeight: 20, fontStyle: 'italic', paddingTop: 4 },
 
-  iconBtn: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.22)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9, backgroundColor: 'rgba(255,79,123,0.06)' },
+  iconBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.18)', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: 'rgba(255,79,123,0.04)' },
   iconText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
 
-  regenPanel: { ...shellStyles.card, gap: 14, marginTop: 6, borderColor: 'rgba(255,79,123,0.18)' },
-  regenTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800' },
-  regenSub: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 20, marginTop: 4 },
-  regen: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginTop: 2 },
-  regenText: { color: TEXT_TERTIARY, fontSize: 13, fontWeight: '600' },
-  thinkingPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,79,123,0.20)', backgroundColor: 'rgba(255,79,123,0.07)', padding: 14, marginTop: 2 },
-  thinkingTitle: { color: TEXT_PRIMARY, fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  thinkingSub: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  body: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+  regenPanel: { ...shellStyles.card, gap: 16, marginTop: 8, borderColor: 'rgba(255,79,123,0.15)', padding: 20 },
+  regenCard: { ...shellStyles.card, gap: 20, marginTop: 24, borderColor: 'rgba(255,79,123,0.15)', padding: 20, backgroundColor: 'rgba(255,79,123,0.02)' },
+  regenHeader: { gap: 6 },
+  regenTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
+  regenSub: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  regenButton: { height: 54 },
+  
+  thinkingPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,79,123,0.15)', backgroundColor: 'rgba(255,79,123,0.04)', padding: 16, marginTop: 12 },
+  thinkingTitle: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 20, fontWeight: '800' },
+  thinkingSub: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 18, marginTop: 2, fontWeight: '500' },
+  body: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 40 },
 })
