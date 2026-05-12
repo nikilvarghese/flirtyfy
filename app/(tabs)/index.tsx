@@ -55,17 +55,19 @@ export default function HomeScreen() {
       </Reveal>
 
       <Reveal delay={60}>
-        <View style={s.toneHeader}>
-          <Text style={s.section}>Reply tone</Text>
+        <View style={s.personaSection}>
           <TactilePressable
             onPress={() => router.push('/persona')}
             style={s.personaTrigger}
             accessibilityLabel={`Edit persona, currently ${persona}`}
           >
-            <Text style={s.personaLabel}>Persona: <Text style={{ color: ACCENT }}>{persona}</Text></Text>
-            <Text style={s.link}>Edit</Text>
+            <View style={s.personaIcon}><UserRoundPen size={14} color={ACCENT} /></View>
+            <Text style={s.personaLabel}>AI Persona: <Text style={{ color: TEXT_PRIMARY }}>{persona}</Text></Text>
+            <View style={s.editBadge}><Text style={s.editBadgeText}>Change</Text></View>
           </TactilePressable>
         </View>
+
+        <Text style={s.section}>Reply tone</Text>
         <View style={s.chips}>
           {TONES.map((item) => (
             <Chip key={item} label={item} active={item === tone} onPress={() => switchTone(item)} />
@@ -212,20 +214,25 @@ const s = StyleSheet.create({
   metricLabel: { color: TEXT_TERTIARY, fontSize: 11, lineHeight: 16, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7 },
   metricDivider: { width: 1, minHeight: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
   metricDividerWide: { width: '100%', height: 1 },
-  toneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 10 },
+  toneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 22, marginBottom: 12 },
+  personaSection: { marginTop: 24, marginBottom: 8 },
   personaTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)'
+    borderColor: 'rgba(255,255,255,0.06)',
+    alignSelf: 'flex-start'
   },
-  personaLabel: { color: TEXT_TERTIARY, fontSize: 12, fontWeight: '700' },
-  section: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', marginTop: 14, marginBottom: -2 },
+  personaIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(255,79,123,0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.15)' },
+  personaLabel: { color: TEXT_TERTIARY, fontSize: 13, fontWeight: '700' },
+  editBadge: { backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginLeft: 4 },
+  editBadgeText: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  section: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginTop: 22, marginBottom: 10 },
   link: { color: ACCENT, fontSize: 12, fontWeight: '800' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
 
