@@ -14,6 +14,7 @@ import {
   TAB_INACTIVE,
   TAB_HEIGHT,
   BG,
+  MAX_CONTENT_WIDTH,
 } from '@/lib/theme'
 import { Text } from '@/components/ui/Text'
 
@@ -158,6 +159,9 @@ const s = StyleSheet.create({
   },
   bar: {
     flexDirection: 'row', height: TAB_HEIGHT, alignItems: 'stretch',
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
   },
   tab: {
     flex: 1, alignItems: 'center', justifyContent: 'flex-start',

@@ -1,16 +1,18 @@
 import React, { useState, useCallback } from 'react'
-import { StyleSheet, View, TouchableOpacity, Modal, FlatList, Pressable, Platform, UIManager, Clipboard } from 'react-native'
+import { StyleSheet, View, TouchableOpacity, Modal, FlatList, Pressable, Platform, UIManager } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { router } from 'expo-router'
 import { Heart, History as HistoryIcon, Trash2, CheckCircle2, Circle, ChevronDown, ChevronUp, X, Copy, AlertTriangle } from 'lucide-react-native'
 import { Text } from '@/components/ui/Text'
 import { shellStyles } from '@/components/FlirtyfyShell'
 import { TAB_BAR_CLEARANCE } from '@/components/TabBar'
-import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BG, BORDER_COLOR, BG, SURFACE, BORDER } from '@/lib/theme'
+import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, CARD_BG, BORDER_COLOR, BG, SURFACE, BORDER, MAX_CONTENT_WIDTH } from '@/lib/theme'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BlurView } from 'expo-blur'
+import { useToast } from '@/contexts/ToastContext'
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
@@ -32,6 +34,7 @@ function timeAgo(date: string | number | Date) {
 export default function HistoryTab() {
   const insets = useSafeAreaInsets()
   const { history, favorites, clearHistory, removeGeneration, removeGenerations, toggleFavorite } = useFlirtyfy()
+  const { showToast } = useToast()
   
   // Selection State
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -75,6 +78,7 @@ export default function HistoryTab() {
       `Are you sure you want to delete ${selectedIds.length} items? This cannot be undone.`,
       () => {
         removeGenerations(selectedIds)
+        showToast('Selected items deleted', 'success')
         setSelectedIds([])
         setIsSelectMode(false)
         if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -88,9 +92,27 @@ export default function HistoryTab() {
       'This will permanently delete all your conversation history. Are you absolutely sure?',
       () => {
         clearHistory()
+        showToast('History cleared', 'success')
         if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
       }
     )
+  }
+
+  async function copyReply(reply: string) {
+    try {
+      await Clipboard.setStringAsync(reply)
+      showToast('Copied to clipboard', 'success')
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    } catch {
+      showToast('Clipboard unavailable', 'error')
+    }
+  }
+
+  function handleFavorite(item: any) {
+    const wasFavorite = !!item.favorite
+    toggleFavorite(item)
+    showToast(wasFavorite ? 'Removed from favorites' : 'Saved to favorites', 'success')
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
   }
 
   const renderItem = ({ item }: { item: any }) => {
@@ -151,11 +173,7 @@ export default function HistoryTab() {
                     <Text style={s.replyText}>{suggestion.reply}</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => {
-                      Clipboard.setString(suggestion.reply)
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                      // Small visual feedback could be added here if needed
-                    }}
+                    onPress={() => copyReply(suggestion.reply)}
                     style={s.miniCopyBtn}
                   >
                     <Copy size={14} color={ACCENT} />
@@ -166,10 +184,7 @@ export default function HistoryTab() {
               
               <View style={s.actionRow}>
                 <TouchableOpacity 
-                  onPress={() => {
-                    toggleFavorite(item)
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                  }}
+                  onPress={() => handleFavorite(item)}
                   style={s.actionBtn}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
@@ -182,7 +197,10 @@ export default function HistoryTab() {
                     showConfirm(
                       'Delete Chat',
                       'Are you sure you want to delete this interaction?',
-                      () => removeGeneration(item.id)
+                      () => {
+                        removeGeneration(item.id)
+                        showToast('Deleted from history', 'success')
+                      }
                     )
                   }}
                   style={s.actionBtn}
@@ -250,6 +268,7 @@ export default function HistoryTab() {
   return (
     <View style={[s.container, { paddingTop: insets.top + 16 }]}>
       <FlatList
+        style={s.flatList}
         data={history}
         renderItem={renderItem}
         ListHeaderComponent={Header}
@@ -324,31 +343,32 @@ export default function HistoryTab() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG, paddingHorizontal: 20 },
-  headerContainer: { marginBottom: 12 },
+  container: { flex: 1, backgroundColor: BG, paddingHorizontal: 20, alignItems: 'center' },
+  flatList: { width: '100%', maxWidth: MAX_CONTENT_WIDTH },
+  headerContainer: { marginBottom: 14 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
-  screenTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', lineHeight: 34 },
+  screenTitle: { color: TEXT_PRIMARY, fontSize: 29, fontWeight: '800', lineHeight: 36 },
   screenSubtitle: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21, marginTop: 4 },
-  summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  summary: { flex: 1, gap: 5 },
+  summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 22 },
+  summary: { flex: 1, gap: 6, minHeight: 104 },
   count: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '900' },
   label: { color: TEXT_SECONDARY, fontSize: 12 },
   list: { },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 10 },
-  listTitle: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  listTitle: { color: TEXT_TERTIARY, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   clearText: { color: '#ff4444', fontWeight: '700', fontSize: 12 },
-  cardWrapper: { marginBottom: 12, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: BORDER_COLOR },
+  cardWrapper: { marginBottom: 12, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: BORDER_COLOR, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 3 },
   cardSelected: { borderColor: ACCENT, backgroundColor: 'rgba(255, 79, 123, 0.1)' },
-  card: { padding: 16 },
+  card: { padding: 17 },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
   checkbox: { marginRight: 12, marginTop: 4 },
   headerContent: { flex: 1 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  kindBadge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  kindBadge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   kindText: { color: TEXT_SECONDARY, fontSize: 9, fontWeight: '900' },
-  toneBadge: { backgroundColor: 'rgba(255, 79, 123, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  toneBadge: { backgroundColor: 'rgba(255, 79, 123, 0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   toneText: { color: ACCENT, fontSize: 10, fontWeight: '800' },
-  personaBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  personaBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   personaText: { color: TEXT_PRIMARY, fontSize: 10, fontWeight: '700' },
   timeText: { color: TEXT_SECONDARY, fontSize: 10, marginLeft: 'auto' },
   inputText: { color: TEXT_PRIMARY, fontSize: 14, lineHeight: 20, fontWeight: '600' },
@@ -356,7 +376,7 @@ const s = StyleSheet.create({
   expandedContent: { marginTop: 12 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 12 },
   resultsTitle: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
-  replyItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  replyItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.035)', borderRadius: 14, padding: 13, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   replyNumber: { color: ACCENT, fontSize: 9, fontWeight: '900', marginBottom: 4 },
   replyText: { color: TEXT_PRIMARY, fontSize: 14, lineHeight: 20 },
   miniCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 79, 123, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255, 79, 123, 0.2)', marginLeft: 10 },
@@ -368,7 +388,7 @@ const s = StyleSheet.create({
   emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', marginBottom: 8 },
   emptySubtitle: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
-  batchActionContainer: { position: 'absolute', left: 20, right: 20 },
+  batchActionContainer: { position: 'absolute', left: 20, right: 20, maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' },
   batchDeleteBtn: { borderRadius: 16, overflow: 'hidden' },
   batchGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16 },
   batchText: { color: 'white', fontSize: 15, fontWeight: '800' },

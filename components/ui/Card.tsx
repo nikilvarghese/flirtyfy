@@ -1,5 +1,5 @@
 import { View, StyleSheet, type ViewProps } from 'react-native'
-import { SURFACE, BORDER } from '@/lib/theme'
+import { BORDER, RADIUS_LG, SURFACE_RAISED } from '@/lib/theme'
 
 interface CardProps extends ViewProps {
   /** Tighter padding */
@@ -27,17 +27,16 @@ export function Card({ compact, style, children, ...rest }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor:  SURFACE,
-    borderRadius:     16,
+    backgroundColor:  SURFACE_RAISED,
+    borderRadius:     RADIUS_LG,
     borderWidth:      StyleSheet.hairlineWidth,
     borderColor:      BORDER,
-    // Subtle elevation
     shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.25,
-    shadowRadius:     6,
-    elevation:        3,
+    shadowOffset:     { width: 0, height: 10 },
+    shadowOpacity:    0.22,
+    shadowRadius:     22,
+    elevation:        4,
   },
-  normal:  { padding: 16 },
-  compact: { padding: 10 },
+  normal:  { padding: 18 },
+  compact: { padding: 12 },
 })

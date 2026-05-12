@@ -1,10 +1,11 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { Text } from '@/components/ui/Text'
 import { Chip, ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { PERSONAS, TONES } from '@/constants/flirtyfy'
 import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER } from '@/lib/theme'
+import { useToast } from '@/contexts/ToastContext'
 import type { Persona, Tone } from '@/types/flirtyfy'
 
 export default function SettingsScreen() {
@@ -20,6 +21,17 @@ export default function SettingsScreen() {
     setDefaultToneOCR,
     setDefaultPersona,
   } = useFlirtyfy()
+  const { showToast } = useToast()
+
+  function saveTone(current: Tone, next: Tone, onChange: (t: Tone) => void) {
+    onChange(next)
+    if (current !== next) showToast('Settings saved', 'success')
+  }
+
+  function savePersona(next: Persona) {
+    setDefaultPersona(next)
+    if (defaultPersona !== next) showToast('Settings saved', 'success')
+  }
 
   const toneSections: Array<{
     label: string
@@ -34,7 +46,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenShell title="Settings" subtitle="Control your AI's default behavior and app preferences." back>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.container}>
+      <View style={s.container}>
         
         <Text style={s.sectionTitle}>Default Persona</Text>
         <View style={s.personaGrid}>
@@ -43,7 +55,7 @@ export default function SettingsScreen() {
             return (
               <Pressable
                 key={p.name}
-                onPress={() => setDefaultPersona(p.name as Persona)}
+                onPress={() => savePersona(p.name as Persona)}
                 style={[
                   s.personaCard,
                   active && s.activeCard
@@ -64,7 +76,7 @@ export default function SettingsScreen() {
                   key={t}
                   label={t}
                   active={section.value === t}
-                  onPress={() => section.onChange(t)}
+                  onPress={() => saveTone(section.value, t, section.onChange)}
                 />
               ))}
             </View>
@@ -83,16 +95,14 @@ export default function SettingsScreen() {
         </View>
 
         <View style={{ height: 40 }} />
-      </ScrollView>
+      </View>
     </ScreenShell>
   )
 }
 
-import { Pressable } from 'react-native'
-
 const s = StyleSheet.create({
-  container: { gap: 24, paddingBottom: 40 },
-  section: { gap: 12 },
+  container: { gap: 22, paddingBottom: 40 },
+  section: { gap: 12, ...shellStyles.card },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '900',
@@ -104,16 +114,19 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    ...shellStyles.card,
   },
   personaCard: {
-    ...shellStyles.card,
     flex: 1,
-    minWidth: '30%',
+    flexBasis: 140,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   activeCard: {
     borderColor: ACCENT,
@@ -130,7 +143,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   legalRow: {
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   legalText: {
     color: TEXT_PRIMARY,

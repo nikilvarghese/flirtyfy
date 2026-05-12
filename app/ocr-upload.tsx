@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
-import { ActivityIndicator, Image, StyleSheet, TextInput, View, Pressable, ScrollView, Alert } from 'react-native'
+import { ActivityIndicator, Image, StyleSheet, TextInput, View, Pressable, ScrollView } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
-import * as Clipboard from 'expo-clipboard'
-import { Copy, Heart } from 'lucide-react-native'
+import { router } from 'expo-router'
 import { Text } from '@/components/ui/Text'
-import { Chip, GradientButton, ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
+import { Chip, GradientButton, ScreenShell } from '@/components/FlirtyfyShell'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { extractChatTextFromImage, generateDatingCopy } from '@/services/openai'
-import { ACCENT, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
+import { ACCENT, ACCENT_DIM, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TONES } from '@/constants/flirtyfy'
-import type { Generation, Tone } from '@/types/flirtyfy'
+import { useToast } from '@/contexts/ToastContext'
+import type { Tone } from '@/types/flirtyfy'
 
 export default function OcrUploadScreen() {
   const {
@@ -17,15 +17,13 @@ export default function OcrUploadScreen() {
     tone,
     setTone,
     addGeneration,
-    history,
-    toggleFavorite,
     defaultToneOCR,
   } = useFlirtyfy()
+  const { showToast } = useToast()
   const [image, setImage] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [ocrLoading, setOcrLoading] = useState(false)
-  const [results, setResults] = useState<Generation | null>(null)
 
   useEffect(() => {
     setTone(defaultToneOCR)
@@ -33,45 +31,50 @@ export default function OcrUploadScreen() {
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permission.granted) return
+    if (!permission.granted) {
+      showToast('Photo permission is needed', 'warning')
+      return
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85 })
     if (result.canceled) return
     const uri = result.assets[0]?.uri
     if (!uri) return
     setImage(uri)
+    showToast('Screenshot uploaded', 'success')
     setOcrLoading(true)
     try {
       const extracted = await extractChatTextFromImage(uri)
       setText(extracted)
-    } catch (error: any) {
-      console.error('[OCR Screen] Extraction error:', error.message)
-      Alert.alert('OCR Failed', error.message || 'Please try again.')
+      showToast('Chat extracted successfully', 'success')
+    } catch {
+      showToast('Could not read screenshot', 'error')
     } finally {
       setOcrLoading(false)
     }
   }
 
-  async function generate(overrideTone?: Tone) {
-    const activeTone = overrideTone || tone
-    if (overrideTone) setTone(overrideTone)
-
+  async function generate() {
+    if (loading || text.trim().length < 8 || ocrLoading) return
     setLoading(true)
     try {
-      const generation = await generateDatingCopy({ kind: 'reply', input: text, tone: activeTone, persona })
+      const generation = await generateDatingCopy({ kind: 'reply', input: text, tone, persona })
       addGeneration(generation)
-      setResults(generation)
-    } catch (err: any) {
-      Alert.alert('Generation failed', err.message || 'Please try again later.')
+      showToast('Replies generated', 'success')
+      router.push({ pathname: '/results', params: { id: generation.id } } as any)
+    } catch {
+      showToast('Failed to generate replies', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const remainingTones = TONES.filter(t => t !== tone)
-  const isCurrentFavorited = results ? history.find(h => h.id === results.id)?.favorite : false
+  function switchTone(nextTone: Tone) {
+    setTone(nextTone)
+    if (nextTone !== tone) showToast(`Tone switched to ${nextTone}`, 'info')
+  }
 
   return (
-    <ScreenShell title="Screenshot OCR" subtitle="Upload a chat screenshot, clean the extracted text, then generate replies." back>
+    <ScreenShell title="OCR Upload" subtitle="Screenshot to text, then generate the perfect reply." back>
       {image ? (
         <View style={s.previewContainer}>
           <Image source={{ uri: image }} style={s.preview} />
@@ -80,86 +83,47 @@ export default function OcrUploadScreen() {
           </Pressable>
         </View>
       ) : (
-        <View style={s.empty}><Text style={s.emptyText}>No screenshot selected</Text></View>
+        <View style={s.empty}>
+          <Pressable onPress={pickImage} style={s.uploadBtn}>
+            <Text style={s.uploadText}>Select Screenshot</Text>
+          </Pressable>
+        </View>
       )}
 
-      {!image && <GradientButton label="Choose screenshot" onPress={pickImage} disabled={ocrLoading} />}
-
-      {ocrLoading ? (
-        <View style={s.loading}><ActivityIndicator color={ACCENT} /><Text style={s.help}>Reading screenshot...</Text></View>
-      ) : null}
+      {ocrLoading && (
+        <View style={s.loading}>
+          <ActivityIndicator color="#ff4f7b" />
+          <Text style={s.help}>Reading screenshot...</Text>
+        </View>
+      )}
 
       <TextInput
         value={text}
         onChangeText={setText}
         multiline
         textAlignVertical="top"
-        placeholder="Extracted chat text appears here"
+        placeholder="Extracted chat text will appear here..."
         placeholderTextColor="rgba(255,255,255,0.28)"
         style={s.input}
       />
 
-      <View style={s.toneRow}>
-        <Text style={s.label}>Initial Tone</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-          {TONES.map((item) => <Chip key={item} label={item} active={tone === item} onPress={() => setTone(item)} />)}
-        </ScrollView>
+      <Text style={s.label}>Initial Tone</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={{ maxHeight: 50 }}>
+        {TONES.map((item) => <Chip key={item} label={item} active={tone === item} onPress={() => switchTone(item)} />)}
+      </ScrollView>
+
+      <View style={{ marginTop: 24 }}>
+        <GradientButton
+          label={loading ? 'Thinking...' : 'Generate replies'}
+          onPress={generate}
+          disabled={loading || text.trim().length < 8 || ocrLoading}
+        />
       </View>
 
-      <GradientButton label={loading ? 'Generating...' : results ? 'Regenerate set' : 'Generate replies'} onPress={() => generate()} disabled={loading || text.trim().length < 8 || ocrLoading} />
-
-      {loading && !results && (
-        <View style={s.loading}><ActivityIndicator color={ACCENT} /><Text style={s.loadingText}>Analyzing context...</Text></View>
-      )}
-
-      {results && (
-        <View style={s.resultsContainer}>
-          <View style={s.resultsHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={s.label}>AI Replies ({tone})</Text>
-              {loading && <ActivityIndicator size="small" color={ACCENT} />}
-            </View>
-            <Pressable
-              onPress={() => results && toggleFavorite(results)}
-              style={s.favoriteBtn}
-            >
-              <Heart size={20} color={isCurrentFavorited ? ACCENT : TEXT_TERTIARY} fill={isCurrentFavorited ? ACCENT : 'transparent'} />
-            </Pressable>
-          </View>
-
-          {results.suggestions.map((item) => (
-            <View key={item.id} style={[shellStyles.card, s.resultCard, loading && { opacity: 0.5 }]}>
-              <View style={s.resultHeader}>
-                <Text style={s.resultTone}>{item.tone}</Text>
-                <View style={s.resultActions}>
-                  <Pressable onPress={() => Clipboard.setStringAsync(item.reply)} style={s.actionIcon}>
-                    <Copy size={16} color={ACCENT} />
-                  </Pressable>
-                </View>
-              </View>
-              <Text style={s.replyText}>{item.reply}</Text>
-            </View>
-          ))}
-
-          {!loading && (
-            <View style={s.regenSection}>
-              <Text style={s.regenLabel}>Try different vibe</Text>
-              <View style={s.regenRow}>
-                {remainingTones.map((t) => (
-                  <Pressable
-                    key={t}
-                    onPress={() => generate(t)}
-                    style={({ pressed }) => [
-                      s.regenChip,
-                      pressed && { opacity: 0.7 }
-                    ]}
-                  >
-                    <Text style={s.regenChipText}>{t}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
+      {loading && (
+        <View style={s.loading}>
+          <ActivityIndicator color="#ff4f7b" />
+          <Text style={s.loadingText}>Vibe check in progress...</Text>
         </View>
       )}
 
@@ -169,38 +133,17 @@ export default function OcrUploadScreen() {
 }
 
 const s = StyleSheet.create({
-  previewContainer: { width: '100%', aspectRatio: 1.2, borderRadius: 18, overflow: 'hidden', position: 'relative' },
-  preview: { width: '100%', height: '100%', backgroundColor: SURFACE },
-  changeImageBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  changeImageText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  empty: { height: 180, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: SURFACE, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: TEXT_SECONDARY },
-  input: { minHeight: 140, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: SURFACE, padding: 16, color: '#fff', fontSize: 15, lineHeight: 22, marginTop: 12 },
-  loading: { alignItems: 'center', gap: 10, paddingVertical: 20 },
-  help: { color: TEXT_SECONDARY, fontSize: 13 },
+  previewContainer: { width: '100%', aspectRatio: 1.5, borderRadius: 20, overflow: 'hidden', position: 'relative', backgroundColor: SURFACE, borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)', shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.2, shadowRadius: 22, elevation: 3 },
+  preview: { width: '100%', height: '100%', resizeMode: 'contain' },
+  changeImageBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.68)', paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  changeImageText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  empty: { height: 150, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)', backgroundColor: SURFACE, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.2, shadowRadius: 22, elevation: 3 },
+  uploadBtn: { padding: 20 },
+  uploadText: { color: ACCENT, fontWeight: '800' },
+  input: { minHeight: 190, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)', backgroundColor: SURFACE, padding: 18, color: TEXT_PRIMARY, fontSize: 15, lineHeight: 23, marginTop: 20 },
+  loading: { alignItems: 'center', gap: 10, padding: 18, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: ACCENT_DIM },
+  help: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   loadingText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
-  label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
-  toneRow: { marginTop: 16, marginBottom: 20, gap: 10 },
-  chips: { gap: 9 },
-  resultsContainer: { marginTop: 10, gap: 16 },
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  resultCard: { gap: 10, backgroundColor: 'rgba(255,255,255,0.03)' },
-  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  resultTone: { color: ACCENT, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  resultActions: { flexDirection: 'row', gap: 14 },
-  actionIcon: { padding: 4 },
-  favoriteBtn: { padding: 8, marginRight: -8 },
-  replyText: { color: TEXT_PRIMARY, fontSize: 16, lineHeight: 24, fontWeight: '700' },
-  regenSection: { marginTop: 10, gap: 12 },
-  regenLabel: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
-  regenRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  regenChip: {
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10
-  },
-  regenChipText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
+  label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 24, marginBottom: 12 },
+  chips: { gap: 9, paddingRight: 6 },
 })

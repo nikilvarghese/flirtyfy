@@ -7,7 +7,7 @@
  * the screens registered here.
  */
 import { Tabs } from 'expo-router'
-import { Heart, WandSparkles, Clock3, CircleUser } from 'lucide-react-native'
+import { Heart, Clock3, CircleUser } from 'lucide-react-native'
 import TabBar, { TAB_BAR_HEIGHT } from '@/components/TabBar'
 import { BG } from '@/lib/theme'
 
@@ -28,16 +28,6 @@ export default function TabsLayout() {
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Heart size={size} color={color} strokeWidth={1.8} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          tabBarLabel: 'Create',
-          tabBarIcon: ({ color, size }) => (
-            <WandSparkles size={size} color={color} strokeWidth={1.8} />
           ),
         }}
       />

@@ -9,6 +9,7 @@ import {
 } from '@/components/FlirtyfyShell'
 
 import { useFlirtyfy } from '@/store/flirtyfyStore'
+import { useToast } from '@/contexts/ToastContext'
 
 import {
   ACCENT,
@@ -24,6 +25,21 @@ export default function FavoritesScreen() {
     favorites,
     toggleFavorite,
   } = useFlirtyfy()
+  const { showToast } = useToast()
+
+  async function copyReply(reply: string) {
+    try {
+      await Clipboard.setStringAsync(reply)
+      showToast('Copied to clipboard', 'success')
+    } catch {
+      showToast('Clipboard unavailable', 'error')
+    }
+  }
+
+  function removeFavorite(item: any) {
+    toggleFavorite(item)
+    showToast('Removed from favorites', 'success')
+  }
 
   return (
     <ScreenShell
@@ -32,7 +48,7 @@ export default function FavoritesScreen() {
       back
     >
       {favorites.length === 0 ? (
-        <View style={shellStyles.card}>
+        <View style={[shellStyles.card, s.emptyCard]}>
           <Text style={s.body}>
             Favorite a result to keep it here.
           </Text>
@@ -87,9 +103,7 @@ export default function FavoritesScreen() {
 
                       <TouchableOpacity
                         onPress={() => {
-                          Clipboard.setStringAsync(
-                            suggestion.reply
-                          )
+                          copyReply(suggestion.reply)
                         }}
                         style={s.copyBtn}
                       >
@@ -114,9 +128,7 @@ export default function FavoritesScreen() {
 
             <View style={s.bottomRow}>
               <TouchableOpacity
-                onPress={() =>
-                  toggleFavorite(item)
-                }
+                onPress={() => removeFavorite(item)}
                 style={s.deleteBtn}
               >
                 <Trash2
@@ -139,6 +151,7 @@ export default function FavoritesScreen() {
 const s = StyleSheet.create({
   card: {
     gap: 16,
+    borderColor: 'rgba(255,79,123,0.16)',
   },
 
   header: {
@@ -155,15 +168,17 @@ const s = StyleSheet.create({
   kindPill: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 999,
   },
 
   tonePill: {
     backgroundColor: 'rgba(255,79,123,0.12)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,79,123,0.18)',
   },
 
   kindText: {
@@ -187,7 +202,7 @@ const s = StyleSheet.create({
   input: {
     color: TEXT_PRIMARY,
     fontSize: 16,
-    lineHeight: 26,
+    lineHeight: 25,
     fontWeight: '700',
   },
 
@@ -211,8 +226,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
     backgroundColor: SURFACE,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 15,
     gap: 10,
   },
 
@@ -244,6 +259,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
+    backgroundColor: 'rgba(255,79,123,0.05)',
   },
 
   copyText: {
@@ -272,7 +288,13 @@ const s = StyleSheet.create({
 
   body: {
     color: TEXT_SECONDARY,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  emptyCard: {
+    minHeight: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

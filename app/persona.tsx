@@ -5,9 +5,17 @@ import { ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
 import { PERSONAS } from '@/constants/flirtyfy'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { useToast } from '@/contexts/ToastContext'
+import type { Persona } from '@/types/flirtyfy'
 
 export default function PersonaScreen() {
   const { persona, setPersona } = useFlirtyfy()
+  const { showToast } = useToast()
+
+  function selectPersona(nextPersona: Persona) {
+    setPersona(nextPersona)
+    if (nextPersona !== persona) showToast('Persona updated', 'success')
+  }
 
   return (
     <ScreenShell title="AI persona" subtitle="Personas change the prompt strategy, not just the label." back>
@@ -16,7 +24,7 @@ export default function PersonaScreen() {
         return (
           <Pressable
             key={item.name}
-            onPress={() => setPersona(item.name)}
+            onPress={() => selectPersona(item.name)}
             style={({ pressed }) => [
               shellStyles.card,
               s.row,

@@ -1,18 +1,23 @@
 import { useState } from 'react'
-import { Alert, Pressable, Clipboard, StyleSheet, View, ActivityIndicator } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View, ActivityIndicator } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Copy, Heart, RefreshCcw } from 'lucide-react-native'
 import { Text } from '@/components/ui/Text'
-import { GradientButton, ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
+import { GradientButton, Reveal, ScreenShell, shellStyles, TactilePressable } from '@/components/FlirtyfyShell'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { generateDatingCopy } from '@/services/openai'
-import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
+import { ACCENT, ACCENT_BORDER, ACCENT_DIM, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function ResultsScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const { history, toggleFavorite, addGeneration, persona, tone } = useFlirtyfy()
+  const { showToast } = useToast()
   const generation = history.find((item) => item.id === id) ?? history[0]
   const [loading, setLoading] = useState(false)
+  const { width } = useWindowDimensions()
+  const isWide = width >= 820
 
   async function regenerate() {
     if (!generation || loading) return
@@ -27,69 +32,183 @@ export default function ResultsScreen() {
         previousReplies
       })
       addGeneration(next)
+      showToast('Replies generated', 'success')
       router.setParams({ id: next.id })
-    } catch (err: any) {
-      Alert.alert('Generation failed', err.message || 'Please try again later.')
+    } catch {
+      showToast('Failed to generate replies', 'error')
     } finally {
       setLoading(false)
     }
   }
 
+  async function copyReply(reply: string) {
+    try {
+      await Clipboard.setStringAsync(reply)
+      showToast('Copied to clipboard', 'success')
+    } catch {
+      showToast('Clipboard unavailable', 'error')
+    }
+  }
+
+  function toggleResultFavorite() {
+    if (!generation) return
+    const wasFavorite = !!generation.favorite
+    toggleFavorite(generation)
+    showToast(wasFavorite ? 'Removed from favorites' : 'Saved to favorites', 'success')
+  }
+
+  const contextBlock = generation ? (
+    <Reveal delay={80} style={isWide ? s.desktopContext : undefined}>
+      <Text style={s.sectionTitle}>Original Conversation</Text>
+      <View style={[shellStyles.card, s.contextCard]}>
+        <Text style={s.contextText}>{generation.input}</Text>
+      </View>
+      {isWide ? (
+        <View style={s.regenPanel}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.regenTitle}>Want another angle?</Text>
+            <Text style={s.regenSub}>Regenerate keeps your conversation context and tries fresh options.</Text>
+          </View>
+          <GradientButton label={loading ? 'Regenerating...' : 'Regenerate all options'} onPress={regenerate} disabled={loading} />
+        </View>
+      ) : null}
+    </Reveal>
+  ) : null
+
+  const repliesBlock = generation ? (
+    <Reveal delay={120} style={isWide ? s.desktopReplies : undefined}>
+      <Text style={s.sectionTitle}>Generated Replies</Text>
+      <View style={s.replyStack}>
+        {generation.suggestions.map((item, idx) => (
+          <Reveal key={item.id} delay={150 + idx * 50}>
+            <View style={[shellStyles.card, s.result]}>
+              <View style={s.resultHeader}>
+                <View>
+                  <Text style={s.tone}>{item.tone}</Text>
+                  <Text style={s.optionNum}>Option {idx + 1}</Text>
+                </View>
+                <TactilePressable
+                  onPress={() => copyReply(item.reply)}
+                  style={s.iconBtn}
+                  accessibilityLabel={`Copy option ${idx + 1}`}
+                >
+                  <Copy size={16} color={ACCENT} />
+                  <Text style={s.iconText}>Copy</Text>
+                </TactilePressable>
+              </View>
+              <Text style={s.reply}>{item.reply}</Text>
+              {item.reason ? <Text style={s.reason}>{item.reason}</Text> : null}
+            </View>
+          </Reveal>
+        ))}
+      </View>
+    </Reveal>
+  ) : null
+
+  const regenBlock = generation && !isWide ? (
+    <Reveal delay={220}>
+      <View style={s.regenPanel}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.regenTitle}>Want another angle?</Text>
+          <Text style={s.regenSub}>Regenerate keeps your conversation context and tries fresh options.</Text>
+        </View>
+        <GradientButton label={loading ? 'Regenerating...' : 'Regenerate all options'} onPress={regenerate} disabled={loading} />
+      </View>
+    </Reveal>
+  ) : null
+
   return (
-    <ScreenShell title="Reply results" subtitle="Copy, favorite, or regenerate until the message has the right temperature." back>
+    <ScreenShell title="Reply results" subtitle="The perfect response is just a copy away." back>
       {!generation ? (
         <View style={shellStyles.card}><Text style={s.body}>No generation found yet.</Text></View>
       ) : (
         <>
+          {/* Header Meta */}
+          <Reveal>
           <View style={s.meta}>
             <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Text style={s.metaText}>{generation.persona}</Text>
-              <Text style={s.metaText}>{generation.tone}</Text>
-              <Text style={s.metaText}>{generation.suggestions.length} options</Text>
+              <View style={s.badge}><Text style={s.badgeText}>{generation.persona}</Text></View>
+              <View style={s.badge}><Text style={s.badgeText}>{generation.tone}</Text></View>
+              <View style={[s.badge, { borderColor: 'rgba(255,255,255,0.1)' }]}><Text style={[s.badgeText, { color: TEXT_TERTIARY }]}>{generation.kind}</Text></View>
             </View>
-            <Pressable 
-              onPress={() => toggleFavorite(generation)} 
+            <TactilePressable
+              onPress={toggleResultFavorite}
               style={s.favoriteBtn}
+              accessibilityLabel={generation.favorite ? 'Remove from favorites' : 'Add to favorites'}
             >
               <Heart size={22} color={generation.favorite ? ACCENT : TEXT_TERTIARY} fill={generation.favorite ? ACCENT : 'transparent'} />
-            </Pressable>
+            </TactilePressable>
           </View>
-          {generation.suggestions.map((item) => (
-            <View key={item.id} style={[shellStyles.card, s.result]}>
-              <Text style={s.tone}>{item.tone}</Text>
-              <Text style={s.reply}>{item.reply}</Text>
-              {item.reason ? <Text style={s.body}>{item.reason}</Text> : null}
-              <View style={s.actions}>
-                <Pressable
-                  onPress={() => {
-                    Clipboard.setString(item.reply)
-                  }}
-                  style={s.iconBtn}
-                ><Copy size={16} color={ACCENT} /><Text style={s.iconText}>Copy</Text></Pressable>
-              </View>
+          </Reveal>
+
+          {isWide ? (
+            <View style={s.desktopGrid}>
+              {contextBlock}
+              {repliesBlock}
             </View>
-          ))}
-          <GradientButton label={loading ? 'Regenerating...' : 'Regenerate set'} onPress={regenerate} disabled={loading} />
+          ) : (
+            <>
+              {contextBlock}
+              {repliesBlock}
+              {regenBlock}
+            </>
+          )}
+
+          {loading ? (
+            <Reveal delay={40}>
+              <View style={s.thinkingPanel}>
+                <ActivityIndicator size="small" color={ACCENT} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.thinkingTitle}>AI is reading the room</Text>
+                  <Text style={s.thinkingSub}>Finding fresher replies without changing your context.</Text>
+                </View>
+              </View>
+            </Reveal>
+          ) : null}
         </>
       )}
+
       <Pressable onPress={regenerate} style={[s.regen, loading && { opacity: 0.5 }]} disabled={loading}>
         {loading ? <ActivityIndicator size="small" color={TEXT_TERTIARY} /> : <RefreshCcw size={14} color={TEXT_TERTIARY} />}
-        <Text style={s.body}>{loading ? 'Writing new options...' : 'Try a different read of the vibe'}</Text>
+        <Text style={s.regenText}>{loading ? 'Thinking of new lines...' : 'Not quite right? Try a different read.'}</Text>
       </Pressable>
     </ScreenShell>
   )
 }
 
 const s = StyleSheet.create({
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  favoriteBtn: { padding: 8, marginRight: -8 },
-  metaText: { color: ACCENT, borderWidth: 1, borderColor: 'rgba(255,79,123,0.35)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, fontWeight: '800' },
-  result: { gap: 8 },
-  tone: { color: ACCENT, fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
-  reply: { color: TEXT_PRIMARY, fontSize: 17, lineHeight: 25, fontWeight: '800' },
-  body: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 20 },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  iconBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 11, paddingHorizontal: 11, paddingVertical: 8 },
-  iconText: { color: ACCENT, fontSize: 12, fontWeight: '800' },
-  regen: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  desktopContext: { flex: 0.84 },
+  desktopReplies: { flex: 1.18 },
+  favoriteBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: BORDER },
+  badge: { borderWidth: 1, borderColor: 'rgba(255,79,123,0.3)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: ACCENT_DIM },
+  badgeText: { color: ACCENT, fontSize: 12, fontWeight: '800', textTransform: 'capitalize' },
+
+  sectionTitle: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, marginTop: 8 },
+
+  contextCard: { backgroundColor: 'rgba(255,255,255,0.035)', borderColor: 'rgba(255,255,255,0.07)', marginBottom: 18 },
+  contextText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
+
+  replyStack: { gap: 12 },
+  result: { gap: 14, borderColor: ACCENT_BORDER, backgroundColor: SURFACE },
+  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tone: { color: ACCENT, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  optionNum: { color: TEXT_TERTIARY, fontSize: 11, fontWeight: '700', marginTop: 3 },
+
+  reply: { color: TEXT_PRIMARY, fontSize: 18, lineHeight: 27, fontWeight: '800' },
+  reason: { color: TEXT_TERTIARY, fontSize: 13, lineHeight: 20, fontStyle: 'italic', paddingTop: 2 },
+
+  iconBtn: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.22)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9, backgroundColor: 'rgba(255,79,123,0.06)' },
+  iconText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
+
+  regenPanel: { ...shellStyles.card, gap: 14, marginTop: 6, borderColor: 'rgba(255,79,123,0.18)' },
+  regenTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800' },
+  regenSub: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 20, marginTop: 4 },
+  regen: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginTop: 2 },
+  regenText: { color: TEXT_TERTIARY, fontSize: 13, fontWeight: '600' },
+  thinkingPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,79,123,0.20)', backgroundColor: 'rgba(255,79,123,0.07)', padding: 14, marginTop: 2 },
+  thinkingTitle: { color: TEXT_PRIMARY, fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  thinkingSub: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  body: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 20 },
 })

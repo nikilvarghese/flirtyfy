@@ -4,20 +4,24 @@ import { Crown, Heart, Settings, ShieldCheck } from 'lucide-react-native'
 import { Text } from '@/components/ui/Text'
 import { GlowCard, ScreenShell, shellStyles } from '@/components/FlirtyfyShell'
 import { TAB_BAR_CLEARANCE } from '@/components/TabBar'
-import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { ACCENT, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 export default function ProfileScreen() {
-  const { isPremium } = useSubscription()
   const { persona, history, favorites } = useFlirtyfy()
 
   return (
     <ScreenShell title="Profile" subtitle="Account, subscription, persona, and product settings." bottomPadding={TAB_BAR_CLEARANCE + 18}>
-      <GlowCard style={{ alignItems: 'center', gap: 8 }}>
+      <GlowCard style={s.hero}>
         <View style={s.avatar}><Text style={s.avatarText}>F</Text></View>
-        <Text style={s.name}>Flirtyfy user</Text>
-        <Text style={s.body}>Pro member - {persona} mode</Text>
+        <View style={{ alignItems: 'center', gap: 5 }}>
+          <View style={s.memberPill}>
+            <Crown size={13} color={ACCENT} />
+            <Text style={s.memberText}>Pro member</Text>
+          </View>
+          <Text style={s.name}>Flirtyfy user</Text>
+          <Text style={s.body}>{persona} mode</Text>
+        </View>
       </GlowCard>
       <View style={s.stats}>
         <View style={[shellStyles.card, s.stat]}><Text style={s.count}>{history.length}</Text><Text style={s.body}>Generations</Text></View>
@@ -41,14 +45,17 @@ function Row({ icon, label, value, onPress }: { icon: React.ReactNode; label: st
 }
 
 const s = StyleSheet.create({
-  avatar: { width: 76, height: 76, borderRadius: 24, backgroundColor: 'rgba(255,79,123,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.35)' },
+  hero: { alignItems: 'center', gap: 14, paddingVertical: 24 },
+  avatar: { width: 82, height: 82, borderRadius: 26, backgroundColor: 'rgba(255,79,123,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,79,123,0.35)' },
   avatarText: { color: ACCENT, fontSize: 32, fontWeight: '900' },
-  name: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '900' },
+  memberPill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,79,123,0.28)', backgroundColor: 'rgba(255,79,123,0.10)', paddingHorizontal: 10, paddingVertical: 6 },
+  memberText: { color: ACCENT, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.6 },
+  name: { color: TEXT_PRIMARY, fontSize: 23, fontWeight: '900' },
   body: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 20 },
   stats: { flexDirection: 'row', gap: 12 },
-  stat: { flex: 1 },
+  stat: { flex: 1, minHeight: 96, justifyContent: 'center' },
   count: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '900' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58 },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '800', flex: 1 },
   rowValue: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
 })

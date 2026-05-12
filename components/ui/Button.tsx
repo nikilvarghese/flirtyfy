@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, ActivityIndicator, type PressableProps, type ViewStyle } from 'react-native'
 import { Text } from './Text'
-import { ACCENT, ACCENT_DIM, ACCENT_BORDER, BG, SURFACE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ACCENT, ACCENT_DIM, ACCENT_BORDER, BG, BORDER, RADIUS_MD, RADIUS_LG, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
 import { adjustBrightness } from '@/lib/utils'
 
@@ -17,9 +17,9 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
 }
 
 const SIZE_STYLES: Record<ButtonSize, { height: number; borderRadius: number; paddingHorizontal: number; fontSize: number }> = {
-  sm:  { height: 36, borderRadius: 10, paddingHorizontal: 16, fontSize: 13 },
-  md:  { height: 48, borderRadius: 13, paddingHorizontal: 20, fontSize: 15 },
-  lg:  { height: 56, borderRadius: 16, paddingHorizontal: 24, fontSize: 16 },
+  sm:  { height: 38, borderRadius: RADIUS_MD, paddingHorizontal: 16, fontSize: 13 },
+  md:  { height: 50, borderRadius: RADIUS_MD, paddingHorizontal: 20, fontSize: 15 },
+  lg:  { height: 58, borderRadius: RADIUS_LG, paddingHorizontal: 24, fontSize: 16 },
 }
 
 export function Button({
@@ -44,6 +44,11 @@ export function Button({
     alignSelf:       fullWidth ? 'stretch' : 'flex-start',
     opacity:         isDisabled ? 0.4 : 1,
     overflow:        'hidden',
+    shadowColor:     variant === 'primary' ? ACCENT : '#000',
+    shadowOffset:    { width: 0, height: variant === 'primary' ? 10 : 4 },
+    shadowOpacity:   variant === 'primary' ? 0.22 : 0.12,
+    shadowRadius:    variant === 'primary' ? 18 : 10,
+    elevation:       variant === 'primary' ? 4 : 1,
     ...(variant === 'secondary' && {
       backgroundColor: ACCENT_DIM,
       borderWidth: 1,
@@ -76,7 +81,7 @@ export function Button({
     <Pressable
       style={({ pressed }) => [
         containerStyle,
-        pressed && !isDisabled && { opacity: 0.82 },
+        pressed && !isDisabled && { opacity: 0.84, transform: [{ scale: 0.99 }] },
         style,
       ]}
       disabled={isDisabled}

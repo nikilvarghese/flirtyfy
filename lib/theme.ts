@@ -29,6 +29,8 @@ export const SURFACE2 = '#211720'
 export const SURFACE3 = '#2d2029'
 export const CARD_BG = 'rgba(18,18,22,0.92)'
 export const BORDER_COLOR = 'rgba(255,255,255,0.06)'
+export const SURFACE_GLASS = 'rgba(22,18,26,0.82)'
+export const SURFACE_RAISED = '#1a121b'
 
 // ── Text ──────────────────────────────────────────────────────────────────────
 export const TEXT_PRIMARY = '#ffffff'
@@ -50,3 +52,16 @@ export const SUCCESS = '#4ade80'
 export const TAB_ACTIVE = ACCENT
 export const TAB_INACTIVE = 'rgba(255,255,255,0.40)'
 export const TAB_HEIGHT = 68
+
+// Layout and component tokens
+export const MAX_CONTENT_WIDTH = 760
+export const MAX_READING_WIDTH = 640
+export const RADIUS_SM = 10
+export const RADIUS_MD = 14
+export const RADIUS_LG = 18
+export const RADIUS_XL = 24
+export const SPACING_XS = 6
+export const SPACING_SM = 10
+export const SPACING_MD = 14
+export const SPACING_LG = 18
+export const SPACING_XL = 24
