@@ -205,7 +205,6 @@ function RootLayout() {
                           <Stack.Screen name="openers" />
                           <Stack.Screen name="bio-writer" />
                           <Stack.Screen name="favorites" />
-                          <Stack.Screen name="history" />
                           <Stack.Screen name="persona" />
                           <Stack.Screen name="settings" />
                           <Stack.Screen name="support" />

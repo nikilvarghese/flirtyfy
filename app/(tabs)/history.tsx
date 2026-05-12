@@ -122,6 +122,11 @@ export default function HistoryTab() {
                 <View style={s.toneBadge}>
                   <Text style={s.toneText}>{item.tone}</Text>
                 </View>
+                {item.persona && (
+                  <View style={s.personaBadge}>
+                    <Text style={s.personaText}>{item.persona}</Text>
+                  </View>
+                )}
                 <Text style={s.timeText}>{timeAgo(item.createdAt)}</Text>
               </View>
               <Text numberOfLines={isExpanded ? undefined : 2} style={s.inputText}>
@@ -343,6 +348,8 @@ const s = StyleSheet.create({
   kindText: { color: TEXT_SECONDARY, fontSize: 9, fontWeight: '900' },
   toneBadge: { backgroundColor: 'rgba(255, 79, 123, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   toneText: { color: ACCENT, fontSize: 10, fontWeight: '800' },
+  personaBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  personaText: { color: TEXT_PRIMARY, fontSize: 10, fontWeight: '700' },
   timeText: { color: TEXT_SECONDARY, fontSize: 10, marginLeft: 'auto' },
   inputText: { color: TEXT_PRIMARY, fontSize: 14, lineHeight: 20, fontWeight: '600' },
   expandBtn: { padding: 4, marginLeft: 8 },

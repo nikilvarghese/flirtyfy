@@ -36,15 +36,23 @@ export default function ResultsScreen() {
   }
 
   return (
-    <ScreenShell title="Reply results" subtitle="Copy, favorite, or regenerate until the message has the right temperature.">
+    <ScreenShell title="Reply results" subtitle="Copy, favorite, or regenerate until the message has the right temperature." back>
       {!generation ? (
         <View style={shellStyles.card}><Text style={s.body}>No generation found yet.</Text></View>
       ) : (
         <>
           <View style={s.meta}>
-            <Text style={s.metaText}>{generation.persona}</Text>
-            <Text style={s.metaText}>{generation.tone}</Text>
-            <Text style={s.metaText}>{generation.suggestions.length} options</Text>
+            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Text style={s.metaText}>{generation.persona}</Text>
+              <Text style={s.metaText}>{generation.tone}</Text>
+              <Text style={s.metaText}>{generation.suggestions.length} options</Text>
+            </View>
+            <Pressable 
+              onPress={() => toggleFavorite(generation)} 
+              style={s.favoriteBtn}
+            >
+              <Heart size={22} color={generation.favorite ? ACCENT : TEXT_TERTIARY} fill={generation.favorite ? ACCENT : 'transparent'} />
+            </Pressable>
           </View>
           {generation.suggestions.map((item) => (
             <View key={item.id} style={[shellStyles.card, s.result]}>
@@ -58,7 +66,6 @@ export default function ResultsScreen() {
                   }}
                   style={s.iconBtn}
                 ><Copy size={16} color={ACCENT} /><Text style={s.iconText}>Copy</Text></Pressable>
-                <Pressable onPress={() => toggleFavorite(generation)} style={s.iconBtn}><Heart size={16} color={ACCENT} /><Text style={s.iconText}>Favorite</Text></Pressable>
               </View>
             </View>
           ))}
@@ -74,7 +81,8 @@ export default function ResultsScreen() {
 }
 
 const s = StyleSheet.create({
-  meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  favoriteBtn: { padding: 8, marginRight: -8 },
   metaText: { color: ACCENT, borderWidth: 1, borderColor: 'rgba(255,79,123,0.35)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, fontWeight: '800' },
   result: { gap: 8 },
   tone: { color: ACCENT, fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },

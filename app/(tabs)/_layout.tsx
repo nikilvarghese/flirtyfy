@@ -43,7 +43,7 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="activity"
+        name="history"
         options={{
           tabBarLabel: 'History',
           tabBarIcon: ({ color, size }) => (

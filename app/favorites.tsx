@@ -29,6 +29,7 @@ export default function FavoritesScreen() {
     <ScreenShell
       title="Favorites"
       subtitle="Saved replies for fast one-tap reuse during a demo or real chat."
+      back
     >
       {favorites.length === 0 ? (
         <View style={shellStyles.card}>

@@ -5,28 +5,51 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text } from '@/components/ui/Text'
 import { ACCENT, ACCENT_BORDER, ACCENT_DIM, BG, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
 
+import { ArrowLeft } from 'lucide-react-native'
+import { router } from 'expo-router'
+
 export function ScreenShell({
   children,
   title,
   subtitle,
   right,
+  back,
+  onBack,
   bottomPadding = 28,
 }: {
   children: React.ReactNode
   title?: string
   subtitle?: string
   right?: React.ReactNode
+  back?: boolean
+  onBack?: () => void
   bottomPadding?: number
 }) {
   const insets = useSafeAreaInsets()
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack()
+    } else if (router.canGoBack()) {
+      router.back()
+    } else {
+      router.replace('/')
+    }
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: BG }}
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: bottomPadding + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
-      {(title || subtitle || right) && (
+      {(title || subtitle || right || back) && (
         <View style={styles.header}>
+          {back && (
+            <Pressable onPress={handleBack} style={styles.backBtn} hitSlop={15}>
+              <ArrowLeft size={22} color={TEXT_SECONDARY} />
+            </Pressable>
+          )}
           <View style={{ flex: 1 }}>
             {title ? <Text style={styles.title}>{title}</Text> : null}
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -57,16 +80,14 @@ export function Chip({
   label,
   active,
   onPress,
-  locked,
 }: {
   label: string
   active?: boolean
   onPress?: () => void
-  locked?: boolean
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}{locked ? ' PRO' : ''}</Text>
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </Pressable>
   )
 }
@@ -93,6 +114,17 @@ export const shellStyles = {
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 20, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginTop: -2,
+  },
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: 0, lineHeight: 34 },
   subtitle: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21, marginTop: 4 },
   glowCard: {

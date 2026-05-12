@@ -16,7 +16,7 @@ const actions = [
 ]
 
 export default function HomeScreen() {
-  const { tone, setTone, history } = useFlirtyfy()
+  const { persona, tone, setTone, history } = useFlirtyfy()
 
   return (
     <ScreenShell bottomPadding={TAB_BAR_CLEARANCE + 18}>
@@ -31,7 +31,10 @@ export default function HomeScreen() {
 
       <View style={s.toneHeader}>
         <Text style={s.section}>Reply tone</Text>
-        <Pressable onPress={() => router.push('/persona')}><Text style={s.link}>Persona: edit</Text></Pressable>
+        <Pressable onPress={() => router.push('/persona')} style={s.personaTrigger}>
+          <Text style={s.personaLabel}>Persona: <Text style={{ color: ACCENT }}>{persona}</Text></Text>
+          <Text style={s.link}>Edit</Text>
+        </Pressable>
       </View>
       <View style={s.chips}>
         {TONES.map((item) => (
@@ -80,6 +83,18 @@ const s = StyleSheet.create({
   heroTitle: { color: '#fff', fontSize: 42, lineHeight: 48, fontWeight: '900', letterSpacing: 0 },
   heroSub: { color: TEXT_SECONDARY, fontSize: 15, lineHeight: 23, marginTop: 8 },
   toneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  personaTrigger: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    backgroundColor: 'rgba(255,255,255,0.05)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)'
+  },
+  personaLabel: { color: TEXT_TERTIARY, fontSize: 12, fontWeight: '700' },
   section: { color: TEXT_TERTIARY, fontSize: 12, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
   link: { color: ACCENT, fontSize: 12, fontWeight: '800' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },

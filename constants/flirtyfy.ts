@@ -15,18 +15,15 @@ export const TONES: Tone[] = [
   'Bold',
 ]
 
-export const PREMIUM_TONES: Tone[] = ['Romantic', 'Savage', 'Gen Z', 'Bold']
-
 export const PERSONAS: Array<{
   name: Persona
   caption: string
-  premium?: boolean
 }> = [
   { name: 'Charmer', caption: 'Warm, witty, emotionally tuned.' },
-  { name: 'Savage', caption: 'Playful pressure, never mean.', premium: true },
+  { name: 'Savage', caption: 'Playful pressure, never mean.' },
   { name: 'Gentleman', caption: 'Classy, calm, mature.' },
   { name: 'Flirty', caption: 'Fast spark with soft confidence.' },
-  { name: 'Meme Lord', caption: 'Internet fluent without being cringe.', premium: true },
+  { name: 'Meme Lord', caption: 'Internet fluent without being cringe.' },
   { name: 'Minimalist', caption: 'Short, clean, high signal.' },
 ]
 
