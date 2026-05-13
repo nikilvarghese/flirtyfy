@@ -66,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'X-Title': 'Flirtyfy OCR',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
+        model: 'google/gemini-2.0-flash-001',
         messages: [
           {
             role: 'user',
@@ -78,9 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 Rules:
 - Ignore timestamps
 - Ignore usernames
-- Ignore UI labels
-- Ignore icons
-- Ignore reactions
 - Preserve message order
 - Return plain text only
 - Format each line as: Them: ... or Me: ...
