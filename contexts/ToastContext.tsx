@@ -30,14 +30,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     const showToast = useCallback((message: string, type: ToastType = 'info') => {
         const id = ++_nextId
-        setToasts((prev) => {
-            const withoutDuplicate = prev.filter((toast) => toast.message !== message)
-            return [...withoutDuplicate, { id, message, type }].slice(-2)
-        })
+        setToasts([{ id, message, type }])
         AccessibilityInfo.announceForAccessibility(message)
-        setTimeout(() => {
-            setToasts((prev) => prev.filter((t) => t.id !== id))
-        }, 3200)
     }, [])
 
     return (
@@ -60,35 +54,32 @@ function toastColor(type: ToastType) {
 function ToastIcon({ type, color }: { type: ToastType; color: string }) {
     switch (type) {
         case 'success':
-            return <Check size={14} color={color} strokeWidth={3.5} />
+            return <Check size={12} color={color} strokeWidth={3.5} />
         case 'error':
-            return <XCircle size={14} color={color} strokeWidth={2.5} />
+            return <XCircle size={12} color={color} strokeWidth={2.5} />
         case 'warning':
-            return <AlertTriangle size={14} color={color} strokeWidth={2.5} />
+            return <AlertTriangle size={12} color={color} strokeWidth={2.5} />
         default:
-            return <Info size={14} color={color} strokeWidth={2.5} />
+            return <Info size={12} color={color} strokeWidth={2.5} />
     }
 }
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
     const opacity = useRef(new Animated.Value(0)).current
-    const translateY = useRef(new Animated.Value(20)).current
-    const scale = useRef(new Animated.Value(0.95)).current
+    const translateY = useRef(new Animated.Value(10)).current
 
     React.useEffect(() => {
         Animated.parallel([
-            Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
-            Animated.spring(translateY, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
-            Animated.spring(scale, { toValue: 1, tension: 80, friction: 10, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+            Animated.timing(translateY, { toValue: 0, duration: 150, useNativeDriver: true }),
         ]).start()
 
         const t = setTimeout(() => {
             Animated.parallel([
-                Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-                Animated.timing(translateY, { toValue: 10, duration: 200, useNativeDriver: true }),
-                Animated.timing(scale, { toValue: 0.95, duration: 200, useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+                Animated.timing(translateY, { toValue: -8, duration: 150, useNativeDriver: true }),
             ]).start(onDismiss)
-        }, 2800)
+        }, 1500)
 
         return () => clearTimeout(t)
     }, [])
@@ -102,15 +93,15 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
                 s.toast,
                 {
                     opacity,
-                    borderColor: isSuccess ? `${ACCENT}60` : `${color}40`,
+                    borderColor: isSuccess ? `${ACCENT}25` : `${color}20`,
                     shadowColor: color,
-                    transform: [{ translateY }, { scale }],
+                    transform: [{ translateY }],
                 },
             ]}
         >
             <View style={[s.iconWrap, { 
-                borderColor: isSuccess ? `${ACCENT}80` : `${color}50`, 
-                backgroundColor: `${color}15` 
+                borderColor: isSuccess ? `${ACCENT}30` : `${color}25`, 
+                backgroundColor: `${color}10` 
             }]}>
                 <ToastIcon type={toast.type} color={color} />
             </View>
@@ -126,7 +117,7 @@ function ToastList({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: num
 
     return (
         <View
-            style={[s.container, { bottom: TAB_HEIGHT + insets.bottom + 20 }]}
+            style={[s.container, { top: insets.top + 12 }]}
             pointerEvents="none"
         >
             {toasts.map((t) => (
@@ -142,39 +133,39 @@ const s = StyleSheet.create({
         left: 20,
         right: 20,
         alignItems: 'center',
-        gap: 10,
-        zIndex: 999,
+        zIndex: 9999,
     },
     toast: {
-        width: '100%',
-        maxWidth: 480,
+        width: 'auto',
+        minWidth: 160,
+        maxWidth: 320,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        backgroundColor: 'rgba(16,12,18,0.94)',
-        borderWidth: 1.5,
-        borderRadius: 22,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 20,
-        elevation: 10,
+        gap: 8,
+        backgroundColor: 'rgba(12, 9, 14, 0.88)',
+        borderWidth: 0.8,
+        borderRadius: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 6,
     },
     iconWrap: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        borderWidth: 1.5,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 0.8,
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
     },
     message: {
-        flex: 1,
-        fontSize: 14,
+        flex: 0,
+        fontSize: 13,
         color: TEXT_PRIMARY,
         fontWeight: '600',
-        letterSpacing: -0.2,
+        letterSpacing: -0.1,
     },
 })
