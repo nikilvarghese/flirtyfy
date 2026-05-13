@@ -66,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'X-Title': 'Flirtyfy OCR',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
+        model: 'openai/gpt-4o-mini',
         messages: [
           {
             role: 'user',
