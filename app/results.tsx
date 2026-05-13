@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, useWindowDimensions, View, ActivityIndicator } from 'react-native'
+import { Pressable, StyleProp, StyleSheet, useWindowDimensions, View, ActivityIndicator } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Copy, Heart, RefreshCcw } from 'lucide-react-native'
@@ -112,10 +112,10 @@ export default function ResultsScreen() {
           <Text style={s.regenTitle}>Want another angle?</Text>
           <Text style={s.regenSub}>Fresh options while keeping your context.</Text>
         </View>
-        <GradientButton 
-          label={loading ? 'Regenerating...' : 'Regenerate all options'} 
-          onPress={regenerate} 
-          disabled={loading} 
+        <GradientButton
+          label={loading ? 'Regenerating...' : 'Regenerate all options'}
+          onPress={regenerate}
+          disabled={loading}
           style={s.regenButton}
         />
       </View>
@@ -130,20 +130,20 @@ export default function ResultsScreen() {
         <View style={s.content}>
           {/* Header Meta */}
           <Reveal>
-          <View style={s.meta}>
-            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={s.badge}><Text style={s.badgeText}>{generation.persona}</Text></View>
-              <View style={s.badge}><Text style={s.badgeText}>{generation.tone}</Text></View>
-              <View style={[s.badge, { borderColor: 'rgba(255,255,255,0.08)' }]}><Text style={[s.badgeText, { color: TEXT_TERTIARY }]}>{generation.kind}</Text></View>
+            <View style={s.meta}>
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View style={s.badge}><Text style={s.badgeText}>{generation.persona}</Text></View>
+                <View style={s.badge}><Text style={s.badgeText}>{generation.tone}</Text></View>
+                <View style={[s.badge, { borderColor: 'rgba(255,255,255,0.08)' }]}><Text style={[s.badgeText, { color: TEXT_TERTIARY }]}>{generation.kind}</Text></View>
+              </View>
+              <TactilePressable
+                onPress={toggleResultFavorite}
+                style={s.favoriteBtn}
+                accessibilityLabel={generation.favorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart size={22} color={generation.favorite ? ACCENT : TEXT_TERTIARY} fill={generation.favorite ? ACCENT : 'transparent'} />
+              </TactilePressable>
             </View>
-            <TactilePressable
-              onPress={toggleResultFavorite}
-              style={s.favoriteBtn}
-              accessibilityLabel={generation.favorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              <Heart size={22} color={generation.favorite ? ACCENT : TEXT_TERTIARY} fill={generation.favorite ? ACCENT : 'transparent'} />
-            </TactilePressable>
-          </View>
           </Reveal>
 
           {isWide ? (
@@ -170,7 +170,7 @@ export default function ResultsScreen() {
               </View>
             </Reveal>
           ) : null}
-          
+
           {/* Bottom spacing to prevent collision with toast */}
           <View style={{ height: 40 }} />
         </View>
@@ -212,7 +212,7 @@ const s = StyleSheet.create({
   regenTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
   regenSub: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, fontWeight: '500' },
   regenButton: { height: 54 },
-  
+
   thinkingPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,79,123,0.15)', backgroundColor: 'rgba(255,79,123,0.04)', padding: 16, marginTop: 12 },
   thinkingTitle: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 20, fontWeight: '800' },
   thinkingSub: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 18, marginTop: 2, fontWeight: '500' },

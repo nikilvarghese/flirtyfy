@@ -220,9 +220,19 @@ export function Chip({
   )
 }
 
-export function GradientButton({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) {
+export function GradientButton({
+  label,
+  onPress,
+  disabled,
+  style,
+}: {
+  label: string
+  onPress?: () => void
+  disabled?: boolean
+  style?: StyleProp<ViewStyle>
+}) {
   return (
-    <TactilePressable onPress={onPress} disabled={disabled} style={styles.button}>
+    <TactilePressable onPress={onPress} disabled={disabled} style={[styles.button, style]}>
       <LinearGradient colors={[ACCENT, '#ff275d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
       <Text style={styles.buttonText}>{label}</Text>
     </TactilePressable>
