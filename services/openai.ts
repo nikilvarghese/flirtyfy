@@ -1,10 +1,11 @@
 import * as Sentry from '@sentry/react-native'
+import * as FileSystem from 'expo-file-system/legacy'
+import { Platform } from 'react-native'
 import { supabase, isSupabaseEnabled } from '@/lib/supabase'
 import { track } from '@/lib/analytics'
 import type { Generation, GenerationKind, Persona, Suggestion, Tone } from '@/types/flirtyfy'
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? ''
-const OPENAI_MODEL = process.env.EXPO_PUBLIC_OPENAI_MODEL ?? 'google/gemini-2.0-flash-001'
 
 type GenerateArgs = {
   kind: GenerationKind
@@ -41,13 +42,11 @@ export async function generateDatingCopy(args: GenerateArgs): Promise<Generation
       refinement: args.persona ? `Persona: ${args.persona}` : undefined
     }
 
-    console.log('[AI] Fetching from backend:', `${BACKEND_URL}/api/chat`, JSON.stringify(payload, null, 2))
+    console.log('[AI] Fetching from backend:', `${BACKEND_URL}/api/chat`)
 
     const response = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
@@ -84,34 +83,133 @@ export async function generateDatingCopy(args: GenerateArgs): Promise<Generation
     createdAt: new Date().toISOString(),
   }
 
-  // Supabase inserts removed to favor local-only as requested (login removed)
-  /*
-  if (isSupabaseEnabled) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('generations').insert({
-          id: generation.id,
-          user_id: user.id,
-          type: generation.kind,
-          input_text: generation.input,
-          persona: generation.persona,
-          tone: generation.tone,
-          output: generation.suggestions,
-        })
-      }
-    } catch (error) {
-      Sentry.captureException(error)
-    }
-  }
-  */
-
   track('generation_completed' as any, { kind: args.kind, count: suggestions.length })
   return generation
 }
 
+function mimeFromUri(uri: string, fallback = 'image/jpeg') {
+  const withoutQuery = uri.split('?')[0]
+  const ext = withoutQuery.split('.').pop()?.toLowerCase()
+
+  if (ext === 'png') return 'image/png'
+  if (ext === 'gif') return 'image/gif'
+  if (ext === 'webp') return 'image/webp'
+  if (ext === 'heic') return 'image/heic'
+  if (ext === 'heif') return 'image/heif'
+
+  return fallback
+}
+
+function base64ToDataUrl(base64: string, mime = 'image/jpeg') {
+  const cleanBase64 = base64.trim()
+  if (!cleanBase64) {
+    throw new Error('Image picker returned an empty base64 payload')
+  }
+
+  return `data:${mime};base64,${cleanBase64}`
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read image blob'))
+    reader.onloadend = () => {
+      const result = reader.result
+      if (typeof result === 'string' && result.startsWith('data:')) {
+        resolve(result)
+        return
+      }
+
+      reject(new Error('Image blob did not produce a data URL'))
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function fetchUriAsDataUrl(uri: string, fallbackMime: string) {
+  const response = await fetch(uri)
+  if (!response.ok) {
+    throw new Error(`Image fetch failed with HTTP ${response.status}`)
+  }
+
+  const blob = await response.blob()
+  const dataUrl = await blobToDataUrl(blob)
+
+  if (dataUrl.startsWith('data:application/octet-stream')) {
+    return dataUrl.replace('data:application/octet-stream', `data:${fallbackMime}`)
+  }
+
+  return dataUrl
+}
+
+/**
+ * Converts image URIs to base64 data URLs across native and web.
+ *
+ * Picker uploads should pass a data URL directly. This fallback supports:
+ * 1. file:// and content:// URIs on native devices
+ * 2. http:// and https:// bundled assets
+ * 3. blob: URIs on Expo web
+ */
+async function uriToDataUrl(uri: string): Promise<string> {
+  // Already a data URL
+  if (uri.startsWith('data:')) {
+    return uri
+  }
+
+  const mime = mimeFromUri(uri)
+
+  if (Platform.OS === 'web' && (uri.startsWith('blob:') || uri.startsWith('http://') || uri.startsWith('https://'))) {
+    console.log('[OCR] Reading web image URI via fetch/FileReader:', uri.slice(0, 60))
+    return fetchUriAsDataUrl(uri, mime)
+  }
+
+  try {
+    // Attempt 1: Direct FileSystem read (works for file:// and content://)
+    console.log('[OCR] Attempting direct FileSystem read for:', uri.slice(0, 60))
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64',
+    })
+    console.log('[OCR] Direct read OK, length:', base64.length)
+    return base64ToDataUrl(base64, mime)
+  } catch (directErr: any) {
+    console.warn('[OCR] Direct read failed (likely remote URI). Attempting download strategy...', directErr?.message)
+    
+    // Attempt 2: Download remote URI to cache, then read (works for http:// dev assets)
+    try {
+      if (!FileSystem.cacheDirectory) {
+        throw new Error('FileSystem cache directory is unavailable')
+      }
+
+      const tempPath = FileSystem.cacheDirectory + `temp_ocr_${Date.now()}.img`
+      console.log('[OCR] Downloading remote URI to:', tempPath)
+      
+      const { uri: localUri } = await FileSystem.downloadAsync(uri, tempPath)
+      
+      const base64 = await FileSystem.readAsStringAsync(localUri, {
+        encoding: 'base64',
+      })
+      console.log('[OCR] Download + read OK, length:', base64.length)
+      
+      // Cleanup
+      await FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {})
+      
+      return base64ToDataUrl(base64, mime)
+    } catch (downloadErr: any) {
+      console.warn('[OCR] Download strategy failed. Attempting fetch fallback...', downloadErr?.message)
+
+      try {
+        return await fetchUriAsDataUrl(uri, mime)
+      } catch (fetchErr: any) {
+        console.error('[OCR] Fetch fallback failed:', fetchErr?.message)
+        throw new Error(`Could not convert image to base64: ${fetchErr?.message ?? downloadErr?.message ?? 'unknown error'}`)
+      }
+    }
+  }
+}
+
+
 export async function extractChatTextFromImage(uri: string): Promise<string> {
-  console.log('[AI] Starting OCR extraction for image:', uri.slice(0, 50) + '...')
+  console.log('[AI] Starting OCR extraction for URI:', uri.slice(0, 60))
   track('ocr_started' as any)
 
   if (!BACKEND_URL) {
@@ -119,50 +217,41 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
   }
 
   try {
-    let dataUrl: string = uri
+    // Convert to base64 data URL using native FileSystem (not FileReader)
+    const dataUrl = await uriToDataUrl(uri)
 
-    // If it's not already a data URL, we need to fetch it and convert it
-    if (!uri.startsWith('data:')) {
-      console.log('[AI] Fetching image from URI...')
-      const response = await fetch(uri)
-      const blob = await response.blob()
-
-      console.log('[AI] Converting image blob to dataURL...')
-      dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onerror = reject
-        reader.onloadend = () => resolve(String(reader.result))
-        reader.readAsDataURL(blob)
-      })
+    if (!dataUrl.startsWith('data:')) {
+      throw new Error(`Image conversion produced an invalid result (not a data URL): ${dataUrl.slice(0, 30)}`)
     }
 
-    console.log('[AI] Sending OCR request to backend:', `${BACKEND_URL}/api/ocr`)
+    console.log('[AI] Sending OCR request to:', `${BACKEND_URL}/api/ocr`)
     const result = await fetch(`${BACKEND_URL}/api/ocr`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        image: dataUrl,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataUrl }),
     })
 
     if (!result.ok) {
       const errorText = await result.text()
-      console.error('[AI] OCR Backend Error:', result.status, errorText)
+      console.error('[AI] OCR backend error:', result.status, errorText)
       throw new Error(`OCR backend returned ${result.status}: ${errorText}`)
     }
 
     const json = await result.json()
-    console.log('[AI] OCR response received')
+    console.log('[AI] OCR response received, text length:', json.text?.length ?? 0)
+
+    if (!json.text || json.text.trim() === '') {
+      console.warn('[AI] OCR returned empty text — image may be too complex or low contrast')
+    }
 
     const extractedText = json.text?.trim() ?? ''
     track('ocr_completed' as any)
     return extractedText
   } catch (error: any) {
-    console.error('[AI] OCR Failure Details:', error.message)
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error('[AI] OCR Failure:', errorMsg)
     Sentry.captureException(error)
     track('ocr_failed' as any)
-    throw error // Re-throw to allow the UI to catch the specific message
+    throw error
   }
 }

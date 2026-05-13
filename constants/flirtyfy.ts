@@ -31,4 +31,7 @@ export const DEMO_CHAT =
   "Them: you always say you're trouble\nMe: only when the company is boring\nThem: so am I boring?"
 
 export const DEMO_PROFILE =
-  'Hinge profile: loves late night drives, espresso martinis, indie movies, and beating people at mini golf.'
+  'Photographer, gym addict, espresso martinis, spontaneous road trips, dry humor, and a dangerous mini golf winning streak.'
+
+export const DEMO_BIO =
+  'Love late night drives, sushi, dogs, and pretending I know how to cook.'

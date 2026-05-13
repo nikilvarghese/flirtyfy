@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
-import { ActivityIndicator, StyleSheet, TextInput, View, ScrollView } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 import { Text } from '@/components/ui/Text'
 import { Chip, GradientButton, ScreenShell } from '@/components/FlirtyfyShell'
 import { DEMO_PROFILE, TONES } from '@/constants/flirtyfy'
+import { DemoAction } from '@/components/DemoAction'
+import { ToolTextArea } from '@/components/ToolTextArea'
 import { useFlirtyfy } from '@/store/flirtyfyStore'
 import { generateDatingCopy } from '@/services/openai'
-import { ACCENT_DIM, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ACCENT_DIM, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
 import { useToast } from '@/contexts/ToastContext'
 import type { Tone } from '@/types/flirtyfy'
 
@@ -19,12 +21,28 @@ export default function OpenersScreen() {
     defaultToneOpeners,
   } = useFlirtyfy()
   const { showToast } = useToast()
-  const [input, setInput] = useState(DEMO_PROFILE)
+  const inputRef = useRef<TextInput>(null)
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [demoFlashKey, setDemoFlashKey] = useState(0)
 
   useEffect(() => {
     setTone(defaultToneOpeners)
   }, [defaultToneOpeners])
+
+  function loadDemoProfile() {
+    setInput(DEMO_PROFILE)
+    setDemoFlashKey((current) => current + 1)
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.setNativeProps?.({
+          selection: { start: DEMO_PROFILE.length, end: DEMO_PROFILE.length },
+        })
+      }, 40)
+    })
+  }
 
   async function generate() {
     if (loading || input.trim().length < 8) return
@@ -48,14 +66,27 @@ export default function OpenersScreen() {
 
   return (
     <ScreenShell title="Openers" subtitle="Personalized first messages from profile details." back>
-      <TextInput
+      {!input.trim() && (
+        <DemoAction
+          label="Use demo profile"
+          hint="Load a sample interaction."
+          onPress={loadDemoProfile}
+        />
+      )}
+
+      <ToolTextArea
+        ref={inputRef}
         value={input}
         onChangeText={setInput}
-        multiline
-        textAlignVertical="top"
         placeholder="Enter profile details, interests, or prompts..."
-        placeholderTextColor="rgba(255,255,255,0.28)"
-        style={s.input}
+        flashKey={demoFlashKey}
+        overlay={
+          <View style={s.overlay}>
+            <Text style={s.overlayLabel}>Profile context</Text>
+            <Text style={s.overlayTitle}>Describe the person you want to message.</Text>
+            <Text style={s.overlayBody}>Add profile details or load the demo to preview AI-generated openers.</Text>
+          </View>
+        }
       />
 
       <Text style={s.label}>Opening Tone</Text>
@@ -84,22 +115,10 @@ export default function OpenersScreen() {
 }
 
 const s = StyleSheet.create({
-  input: {
-    minHeight: 270,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: SURFACE,
-    padding: 18,
-    color: TEXT_PRIMARY,
-    fontSize: 15,
-    lineHeight: 23,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
-    elevation: 3,
-  },
+  overlay: { maxWidth: 340, gap: 8 },
+  overlayLabel: { color: TEXT_TERTIARY, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  overlayTitle: { color: TEXT_PRIMARY, fontSize: 19, lineHeight: 24, fontWeight: '800', marginTop: 2 },
+  overlayBody: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 19, fontWeight: '500' },
   label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 26, marginBottom: 12 },
   chips: { gap: 9, paddingRight: 6 },
   loading: { alignItems: 'center', gap: 12, marginTop: 32, padding: 18, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: ACCENT_DIM },
