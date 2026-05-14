@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { Asset } from 'expo-asset'
+import * as FileSystem from 'expo-file-system/legacy'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
@@ -96,15 +97,18 @@ export default function OcrUploadScreen() {
 
   async function useDemoOcr() {
     try {
+      console.log('[DEMO OCR] Starting')
       const asset = Asset.fromModule(OCR_DEMO_ASSET)
+      console.log('[DEMO OCR] Asset resolved')
       await asset.downloadAsync()
+      console.log('[DEMO OCR] Asset downloaded')
 
-      const resolvedUri = asset.localUri || asset.uri
-      if (!resolvedUri) {
+      const sourceUri = asset.localUri || asset.uri
+      if (!sourceUri) {
         throw new Error('Demo image URI could not be resolved')
       }
 
-      console.log('[OCR DEMO] Resolved URI:', resolvedUri)
+      console.log('[DEMO OCR] URI:', sourceUri)
 
       if (asset.width && asset.height) {
         setImageAspectRatio(asset.width / asset.height)
@@ -112,7 +116,27 @@ export default function OcrUploadScreen() {
         setImageAspectRatio(0.58)
       }
 
-      await runOcrFlow(OCR_DEMO_ASSET, resolvedUri)
+      const tempPath = FileSystem.cacheDirectory + 'ocr-demo.png'
+      await FileSystem.copyAsync({
+        from: sourceUri,
+        to: tempPath,
+      })
+      console.log('[DEMO OCR] Temp path:', tempPath)
+
+      const base64 = await FileSystem.readAsStringAsync(tempPath, {
+        encoding: 'base64',
+      })
+      console.log('[DEMO OCR] Base64 length:', base64.length)
+
+      const dataUrl = `data:image/png;base64,${base64}`
+
+      console.log('[DEMO OCR PAYLOAD]', {
+        startsWithData: dataUrl.startsWith('data:'),
+        length: dataUrl.length,
+        preview: dataUrl.slice(0, 80),
+      })
+
+      await runOcrFlow(OCR_DEMO_ASSET, dataUrl)
     } catch (error: any) {
       console.error('[OCR] Demo load failed:', error)
       showToast('Could not read screenshot', 'error')
