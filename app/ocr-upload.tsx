@@ -123,27 +123,12 @@ export default function OcrUploadScreen() {
         setImageAspectRatio(0.58)
       }
 
-      console.log('[DEMO] step 5 reading directly from URI')
+      console.log('[DEMO] step 5 Passing URI to OCR Flow')
 
-      const base64 =
-        await FileSystem.readAsStringAsync(uri, {
-          encoding: 'base64',
-        })
-
-      console.log('[DEMO] step 7 base64:', base64.length)
-
-      const dataUrl = `data:image/png;base64,${base64}`
-
-      console.log('[DEMO OCR PAYLOAD]', {
-        startsWithData: dataUrl.startsWith('data:'),
-        length: dataUrl.length,
-        preview: dataUrl.slice(0, 80),
-      })
-
-      await runOcrFlow(OCR_DEMO_ASSET, dataUrl)
-    } catch (e) {
+      await runOcrFlow(OCR_DEMO_ASSET, uri)
+    } catch (e: any) {
       console.error('[DEMO OCR ERROR]', e)
-      showToast('Could not read screenshot', 'error')
+      showToast(e?.message ?? 'Could not read screenshot', 'error')
     }
   }
 
