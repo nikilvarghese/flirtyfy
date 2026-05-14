@@ -163,53 +163,48 @@ async function uriToDataUrl(uri: string): Promise<string> {
     return fetchUriAsDataUrl(uri, mime)
   }
 
+  let localUri = uri;
+
   try {
-    // Attempt 1: Direct FileSystem read (works for file:// and content://)
-    console.log('[OCR] Attempting direct FileSystem read for:', uri.slice(0, 60))
-    const base64 = await FileSystem.readAsStringAsync(uri, {
+    if (uri.startsWith('content://')) {
+      if (!FileSystem.cacheDirectory) throw new Error('Cache directory unavailable');
+      const tempPath = FileSystem.cacheDirectory + `temp_content_${Date.now()}.img`;
+      console.log('[OCR] Copying content:// URI to cache:', tempPath);
+      await FileSystem.copyAsync({ from: uri, to: tempPath });
+      localUri = tempPath;
+    } else if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      if (!FileSystem.cacheDirectory) throw new Error('Cache directory unavailable');
+      const tempPath = FileSystem.cacheDirectory + `temp_dl_${Date.now()}.img`;
+      console.log('[OCR] Downloading remote URI to:', tempPath);
+      const { uri: dlUri } = await FileSystem.downloadAsync(uri, tempPath);
+      localUri = dlUri;
+    }
+
+    console.log('[OCR] Attempting FileSystem read for:', localUri.slice(0, 60))
+    const base64 = await FileSystem.readAsStringAsync(localUri, {
       encoding: 'base64',
     })
-    console.log('[OCR] Direct read OK, length:', base64.length)
-    return base64ToDataUrl(base64, mime)
-  } catch (directErr: any) {
-    console.warn('[OCR] Direct read failed (likely remote URI). Attempting download strategy...', directErr?.message)
     
-    // Attempt 2: Download remote URI to cache, then read (works for http:// dev assets)
+    if (localUri !== uri) {
+      await FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {});
+    }
+
+    // Exact pattern requested:
+    return `data:${mime};base64,${base64}`
+  } catch (error: any) {
+    console.warn('[OCR] FileSystem strategy failed. Attempting fetch fallback...', error?.message)
     try {
-      if (!FileSystem.cacheDirectory) {
-        throw new Error('FileSystem cache directory is unavailable')
-      }
-
-      const tempPath = FileSystem.cacheDirectory + `temp_ocr_${Date.now()}.img`
-      console.log('[OCR] Downloading remote URI to:', tempPath)
-      
-      const { uri: localUri } = await FileSystem.downloadAsync(uri, tempPath)
-      
-      const base64 = await FileSystem.readAsStringAsync(localUri, {
-        encoding: 'base64',
-      })
-      console.log('[OCR] Download + read OK, length:', base64.length)
-      
-      // Cleanup
-      await FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {})
-      
-      return base64ToDataUrl(base64, mime)
-    } catch (downloadErr: any) {
-      console.warn('[OCR] Download strategy failed. Attempting fetch fallback...', downloadErr?.message)
-
-      try {
-        return await fetchUriAsDataUrl(uri, mime)
-      } catch (fetchErr: any) {
-        console.error('[OCR] Fetch fallback failed:', fetchErr?.message)
-        throw new Error(`Could not convert image to base64: ${fetchErr?.message ?? downloadErr?.message ?? 'unknown error'}`)
-      }
+      return await fetchUriAsDataUrl(uri, mime)
+    } catch (fetchErr: any) {
+      console.error('[OCR] Fetch fallback failed:', fetchErr?.message)
+      throw new Error(`Could not convert image to base64: ${fetchErr?.message ?? error?.message ?? 'unknown error'}`)
     }
   }
 }
 
-
 export async function extractChatTextFromImage(uri: string): Promise<string> {
   console.log('[AI] Starting OCR extraction for URI:', uri.slice(0, 60))
+  console.log('API URL:', BACKEND_URL)
   track('ocr_started' as any)
 
   if (!BACKEND_URL) {
@@ -223,6 +218,13 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
     const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'unknown';
     console.log(`[AI] Image converted to data URL: length=${dataUrl.length}, mime=${mimeType}`);
+
+    console.log('[OCR CLIENT]', {
+      uri,
+      hasDataPrefix: dataUrl.startsWith('data:'),
+      length: dataUrl.length,
+      preview: dataUrl.slice(0, 80),
+    })
 
     if (!dataUrl.startsWith('data:')) {
       throw new Error(`Image conversion produced an invalid result (not a data URL): ${dataUrl.slice(0, 30)}`)

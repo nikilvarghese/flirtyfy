@@ -51,9 +51,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Image must be a base64 data URL (data:image/...)' })
   }
 
-  const mimeMatch = image.match(/^data:([^;]+);base64,/);
-  const mimeType = mimeMatch ? mimeMatch[1] : 'unknown';
-  console.log(`[OCR] Received image payload: mime=${mimeType}, length=${image.length}`);
+  console.log('[OCR SERVER]', {
+    hasDataPrefix: image.startsWith('data:'),
+    length: image.length,
+    preview: image.slice(0, 80),
+  })
 
   // ── Call OpenRouter with timeout ──────────────────────────────────────────
   const controller = new AbortController()
