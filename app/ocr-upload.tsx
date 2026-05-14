@@ -97,11 +97,14 @@ export default function OcrUploadScreen() {
   async function useDemoOcr() {
     try {
       const asset = Asset.fromModule(OCR_DEMO_ASSET)
-      if (!asset.localUri) {
-        await asset.downloadAsync()
+      await asset.downloadAsync()
+
+      const resolvedUri = asset.localUri || asset.uri
+      if (!resolvedUri) {
+        throw new Error('Demo image URI could not be resolved')
       }
-      const localUri = asset.localUri ?? asset.uri
-      if (!localUri) throw new Error('Could not resolve demo asset URI')
+
+      console.log('[OCR DEMO] Resolved URI:', resolvedUri)
 
       if (asset.width && asset.height) {
         setImageAspectRatio(asset.width / asset.height)
@@ -109,7 +112,7 @@ export default function OcrUploadScreen() {
         setImageAspectRatio(0.58)
       }
 
-      await runOcrFlow(OCR_DEMO_ASSET, localUri)
+      await runOcrFlow(OCR_DEMO_ASSET, resolvedUri)
     } catch (error: any) {
       console.error('[OCR] Demo load failed:', error)
       showToast('Could not read screenshot', 'error')

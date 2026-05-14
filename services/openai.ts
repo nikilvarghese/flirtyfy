@@ -228,11 +228,12 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
       throw new Error(`Image conversion produced an invalid result (not a data URL): ${dataUrl.slice(0, 30)}`)
     }
 
-    console.log('[AI] Sending OCR request to:', `${BACKEND_URL}/api/ocr`)
+    const payloadString = JSON.stringify({ image: dataUrl });
+    console.log(`[AI] Sending OCR request to: ${BACKEND_URL}/api/ocr, payload length: ${payloadString.length}`);
     const result = await fetch(`${BACKEND_URL}/api/ocr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: dataUrl }),
+      body: payloadString,
     })
 
     if (!result.ok) {
