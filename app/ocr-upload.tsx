@@ -97,18 +97,25 @@ export default function OcrUploadScreen() {
 
   async function useDemoOcr() {
     try {
-      console.log('[DEMO OCR] Starting')
-      const asset = Asset.fromModule(OCR_DEMO_ASSET)
-      console.log('[DEMO OCR] Asset resolved')
+      console.log('[DEMO] step 1')
+
+      const asset = Asset.fromModule(
+        require('../assets/ocr-demo.png')
+      )
+
+      console.log('[DEMO] step 2', asset)
+
       await asset.downloadAsync()
-      console.log('[DEMO OCR] Asset downloaded')
 
-      const sourceUri = asset.localUri || asset.uri
-      if (!sourceUri) {
-        throw new Error('Demo image URI could not be resolved')
+      console.log('[DEMO] step 3')
+
+      const uri = asset.localUri || asset.uri
+
+      console.log('[DEMO] step 4 URI:', uri)
+
+      if (!uri) {
+        throw new Error('URI missing')
       }
-
-      console.log('[DEMO OCR] URI:', sourceUri)
 
       if (asset.width && asset.height) {
         setImageAspectRatio(asset.width / asset.height)
@@ -116,17 +123,24 @@ export default function OcrUploadScreen() {
         setImageAspectRatio(0.58)
       }
 
-      const tempPath = FileSystem.cacheDirectory + 'ocr-demo.png'
+      const tempPath =
+        FileSystem.cacheDirectory + 'ocr-demo.png'
+
+      console.log('[DEMO] step 5 temp:', tempPath)
+
       await FileSystem.copyAsync({
-        from: sourceUri,
+        from: uri,
         to: tempPath,
       })
-      console.log('[DEMO OCR] Temp path:', tempPath)
 
-      const base64 = await FileSystem.readAsStringAsync(tempPath, {
-        encoding: 'base64',
-      })
-      console.log('[DEMO OCR] Base64 length:', base64.length)
+      console.log('[DEMO] step 6 copied')
+
+      const base64 =
+        await FileSystem.readAsStringAsync(tempPath, {
+          encoding: 'base64',
+        })
+
+      console.log('[DEMO] step 7 base64:', base64.length)
 
       const dataUrl = `data:image/png;base64,${base64}`
 
@@ -137,8 +151,8 @@ export default function OcrUploadScreen() {
       })
 
       await runOcrFlow(OCR_DEMO_ASSET, dataUrl)
-    } catch (error: any) {
-      console.error('[OCR] Demo load failed:', error)
+    } catch (e) {
+      console.error('[DEMO OCR ERROR]', e)
       showToast('Could not read screenshot', 'error')
     }
   }
