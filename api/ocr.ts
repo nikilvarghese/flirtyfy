@@ -81,20 +81,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 type: 'text',
                 text: `Read this mobile chat screenshot and reconstruct the conversation.
 
-Rules:
-* Keep message order exactly as shown
-* Group messages correctly by side
+CRITICAL RULES FOR QUOTED REPLIES:
+* Many messages are replies to previous messages. They contain a small "quoted" preview box above the actual new text/emoji.
+* You MUST completely ignore the text inside the quoted preview box.
+* ONLY extract the primary new text or emoji that the person typed outside/below the quote box.
+
+Other Rules:
+* Keep message order exactly as shown from top to bottom.
 * Left-side bubbles = Person A
 * Right-side bubbles = Person B
-* Ignore timestamps
-* Ignore UI elements
-* Ignore headers and navigation bars
-* Ignore quoted reply previews
-* Ignore replied-to message cards
-* Ignore forwarded/referenced message snippets
-* Only extract actual chronological chat messages
+* Ignore timestamps (e.g. 9:46 pm)
+* Ignore UI elements, headers, navigation bars.
 * Do not repeat messages already shown earlier in the conversation.
-* Do not ignore emojis.
+* Do not ignore emojis. If a message is just an emoji, extract the emoji.
 
 Return ONLY:
 Person A: ...
