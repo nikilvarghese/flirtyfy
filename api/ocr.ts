@@ -89,7 +89,7 @@ Rules:
 * Ignore headers and navigation bars
 * Ignore quoted reply previews
 * Ignore replied-to message cards
-* gnore forwarded/referenced message snippets
+* Ignore forwarded/referenced message snippets
 * Only extract actual chronological chat messages
 * Do not repeat messages already shown earlier in the conversation.
 * Do not ignore emojis.
