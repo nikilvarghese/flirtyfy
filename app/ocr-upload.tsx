@@ -136,6 +136,19 @@ export default function OcrUploadScreen() {
     if (nextTone !== tone) showToast(`Tone switched to ${nextTone}`, 'success')
   }
 
+  function swapSides() {
+    setText((prev) => {
+      return prev
+        .split('\n')
+        .map(line => {
+          if (line.startsWith('Person A:')) return line.replace('Person A:', 'Person B:');
+          if (line.startsWith('Person B:')) return line.replace('Person B:', 'Person A:');
+          return line;
+        })
+        .join('\n');
+    });
+  }
+
   return (
     <ScreenShell title="OCR Upload" subtitle="Screenshot to text, then generate the perfect reply." back>
       {previewSource ? (
@@ -203,6 +216,14 @@ export default function OcrUploadScreen() {
         }
       />
 
+      {text.trim().length > 0 && (
+        <View style={s.swapContainer}>
+          <Pressable onPress={swapSides} style={s.swapBtn}>
+            <Text style={s.swapText}>↔ Swap sides</Text>
+          </Pressable>
+        </View>
+      )}
+
       <Text style={s.label}>Initial Tone</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={{ maxHeight: 50 }}>
         {TONES.map((item) => <Chip key={item} label={item} active={tone === item} onPress={() => switchTone(item)} />)}
@@ -253,4 +274,7 @@ const s = StyleSheet.create({
   loadingText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 24, marginBottom: 12 },
   chips: { gap: 9, paddingRight: 6 },
+  swapContainer: { alignItems: 'flex-end', marginTop: 12 },
+  swapBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  swapText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
 })

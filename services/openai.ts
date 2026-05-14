@@ -220,6 +220,10 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
     // Convert to base64 data URL using native FileSystem (not FileReader)
     const dataUrl = await uriToDataUrl(uri)
 
+    const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'unknown';
+    console.log(`[AI] Image converted to data URL: length=${dataUrl.length}, mime=${mimeType}`);
+
     if (!dataUrl.startsWith('data:')) {
       throw new Error(`Image conversion produced an invalid result (not a data URL): ${dataUrl.slice(0, 30)}`)
     }
@@ -240,13 +244,14 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
     const json = await result.json()
     console.log('[AI] OCR response received, text length:', json.text?.length ?? 0)
 
-    if (!json.text || json.text.trim() === '') {
-      console.warn('[AI] OCR returned empty text — image may be too complex or low contrast')
-    }
-
     const extractedText = json.text?.trim() ?? ''
+    const sanitizedText = extractedText
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+    
     track('ocr_completed' as any)
-    return extractedText
+    return sanitizedText
   } catch (error: any) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     console.error('[AI] OCR Failure:', errorMsg)

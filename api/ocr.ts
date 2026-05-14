@@ -51,6 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Image must be a base64 data URL (data:image/...)' })
   }
 
+  const mimeMatch = image.match(/^data:([^;]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'unknown';
+  console.log(`[OCR] Received image payload: mime=${mimeType}, length=${image.length}`);
+
   // ── Call OpenRouter with timeout ──────────────────────────────────────────
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -66,23 +70,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'X-Title': 'Flirtyfy OCR',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
+        model: 'google/gemini-2.0-flash-001',
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Extract ONLY the visible chat messages from this screenshot.
+                text: `Read this mobile chat screenshot and reconstruct the conversation.
 
 Rules:
-- Ignore timestamps
-- Ignore usernames
-- Preserve message order
-- Return plain text only
-- Format each line as: Them: ... or Me: ...
+* Keep message order exactly as shown
+* Group messages correctly by side
+* Left-side bubbles = Person A
+* Right-side bubbles = Person B
+* Ignore timestamps
+* Ignore UI elements
+* Ignore headers and navigation bars
 
-Do not explain anything. Do not use markdown.`,
+Return ONLY:
+Person A: ...
+Person B: ...
+
+One message per line.
+No explanations.
+No markdown.`,
               },
               {
                 type: 'image_url',
@@ -106,6 +118,8 @@ Do not explain anything. Do not use markdown.`,
 
     const data = await response.json()
     const text = data?.choices?.[0]?.message?.content?.trim() ?? ''
+
+    console.log(`[OCR] Successfully extracted text, length: ${text.length}`);
 
     if (!text) {
       return res.status(200).json({ success: true, text: '' })
