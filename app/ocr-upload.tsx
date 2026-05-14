@@ -123,20 +123,10 @@ export default function OcrUploadScreen() {
         setImageAspectRatio(0.58)
       }
 
-      const tempPath =
-        FileSystem.cacheDirectory + 'ocr-demo.png'
-
-      console.log('[DEMO] step 5 temp:', tempPath)
-
-      await FileSystem.copyAsync({
-        from: uri,
-        to: tempPath,
-      })
-
-      console.log('[DEMO] step 6 copied')
+      console.log('[DEMO] step 5 reading directly from URI')
 
       const base64 =
-        await FileSystem.readAsStringAsync(tempPath, {
+        await FileSystem.readAsStringAsync(uri, {
           encoding: 'base64',
         })
 
