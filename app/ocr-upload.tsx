@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
-import { Asset } from 'expo-asset'
-import * as FileSystem from 'expo-file-system/legacy'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
@@ -19,6 +17,14 @@ import { useToast } from '@/contexts/ToastContext'
 import type { Tone } from '@/types/flirtyfy'
 
 const OCR_DEMO_ASSET = require('../assets/ocr-demo.png')
+const OCR_DEMO_TEXT = `Person A: you're lowkey trouble 😭
+Person B: depends who's asking
+Person A: wow so mysterious
+Person B: mystery keeps life interesting
+Person A: or stressful
+Person B: only if you can't handle a little chaos
+Person A: so should I be worried? 👀
+Person B: probably a little 😏`
 
 function imagePickerDataUrl(asset: ImagePicker.ImagePickerAsset) {
   if (!asset.base64) {
@@ -99,41 +105,13 @@ export default function OcrUploadScreen() {
     await runOcrFlow({ uri: asset.uri }, imagePickerDataUrl(asset))
   }
 
-  async function useDemoOcr() {
-    try {
-      console.log('[DEMO] step 1')
-
-      const asset = Asset.fromModule(
-        require('../assets/ocr-demo.png')
-      )
-
-      console.log('[DEMO] step 2', asset)
-
-      await asset.downloadAsync()
-
-      console.log('[DEMO] step 3')
-
-      const uri = asset.localUri || asset.uri
-
-      console.log('[DEMO] step 4 URI:', uri)
-
-      if (!uri) {
-        throw new Error('URI missing')
-      }
-
-      if (asset.width && asset.height) {
-        setImageAspectRatio(asset.width / asset.height)
-      } else {
-        setImageAspectRatio(0.58)
-      }
-
-      console.log('[DEMO] step 5 Passing URI to OCR Flow')
-
-      await runOcrFlow(OCR_DEMO_ASSET, uri)
-    } catch (e: any) {
-      console.error('[DEMO OCR ERROR]', e)
-      showToast(e?.message ?? 'Could not read screenshot', 'error')
-    }
+  function useDemoOcr() {
+    setPreviewSource(OCR_DEMO_ASSET)
+    setPreviewKey((current) => current + 1)
+    setImageAspectRatio(0.58)
+    setText(OCR_DEMO_TEXT)
+    setTextFlashKey((current) => current + 1)
+    showToast('Demo chat loaded', 'success')
   }
 
   async function generate() {
