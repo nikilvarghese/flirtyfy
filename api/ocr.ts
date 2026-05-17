@@ -79,12 +79,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             content: [
               {
                 type: 'text',
-                text: `Read this mobile chat screenshot and reconstruct the conversation.
+                text: `Read this chat screenshot and reconstruct the conversation.
+
+This may be a phone screenshot or a wide desktop/web WhatsApp screenshot.
+Desktop screenshots often have incoming bubbles on the far left and outgoing bubbles on the far right.
+Do NOT read all left-side messages first and then all right-side messages.
+Read the conversation by each message bubble's vertical position from top to bottom across the whole image.
+If two bubbles have the same timestamp or are close vertically, use their actual top edge on the screen to decide order.
 
 CRITICAL RULES FOR QUOTED REPLIES:
 * Many messages are replies to previous messages. They contain a small "quoted" preview box above the actual new text/emoji.
 * You MUST completely ignore the text inside the quoted preview box.
 * ONLY extract the primary new text or emoji that the person typed outside/below the quote box.
+* Keep the reply bubble at the position of the primary new message, not the quoted preview box.
 
 Other Rules:
 * Keep message order exactly as shown from top to bottom.
@@ -94,6 +101,7 @@ Other Rules:
 * Ignore UI elements, headers, navigation bars.
 * Do not repeat messages already shown earlier in the conversation.
 * Do not ignore emojis. If a message is just an emoji, extract the emoji.
+* Keep short Hinglish/romanized Hindi text exactly as written; do not translate or "correct" spelling.
 
 Return ONLY:
 Person A: ...
