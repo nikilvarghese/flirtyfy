@@ -21,7 +21,10 @@ import type { Tone } from '@/types/flirtyfy'
 const OCR_DEMO_ASSET = require('../assets/ocr-demo.png')
 
 function imagePickerDataUrl(asset: ImagePicker.ImagePickerAsset) {
-  if (!asset.base64) return asset.uri
+  if (!asset.base64) {
+    console.warn('[OCR] Image picker did not return base64; falling back to URI conversion')
+    return asset.uri
+  }
 
   return `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}`
 }
@@ -66,8 +69,9 @@ export default function OcrUploadScreen() {
       setText(extracted)
       setTextFlashKey((current) => current + 1)
       showToast('Chat extracted successfully', 'success')
-    } catch {
-      showToast('Could not read screenshot', 'error')
+    } catch (error: any) {
+      console.error('[OCR FLOW ERROR]', error?.message ?? error)
+      showToast(error?.message ?? 'Could not read screenshot', 'error')
     } finally {
       setOcrLoading(false)
     }
@@ -80,9 +84,9 @@ export default function OcrUploadScreen() {
       return
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       base64: true,
-      quality: 0.85,
+      quality: 0.55,
     })
     if (result.canceled) return
     const asset = result.assets[0]
@@ -235,7 +239,7 @@ export default function OcrUploadScreen() {
       {text.trim().length > 0 && (
         <View style={s.swapContainer}>
           <Pressable onPress={swapSides} style={s.swapBtn}>
-            <Text style={s.swapText}>↔ Swap sides</Text>
+            <Text style={s.swapText}>Swap sides</Text>
           </Pressable>
         </View>
       )}

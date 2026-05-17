@@ -38,7 +38,7 @@ describe('adjustBrightness', () => {
         const result = adjustBrightness('#0ea5a4', 20)
         expect(result).toMatch(/^#[0-9a-f]{6}$/i)
     })
-    it('clamps channels to 0–255', () => {
+    it('clamps channels to 0-255', () => {
         expect(adjustBrightness('#ffffff', 100)).toBe('#ffffff')
         expect(adjustBrightness('#000000', -100)).toBe('#000000')
     })

@@ -6,6 +6,8 @@ import { track } from '@/lib/analytics'
 import type { Generation, GenerationKind, Persona, Suggestion, Tone } from '@/types/flirtyfy'
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? ''
+const OCR_REQUEST_TIMEOUT_MS = 60000
+const MAX_OCR_PAYLOAD_CHARS = 8_000_000
 
 type GenerateArgs = {
   kind: GenerationKind
@@ -192,6 +194,9 @@ async function uriToDataUrl(uri: string): Promise<string> {
     // Exact pattern requested:
     return `data:${mime};base64,${base64}`
   } catch (error: any) {
+    if (localUri !== uri) {
+      await FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {})
+    }
     console.warn('[OCR] FileSystem strategy failed. Attempting fetch fallback...', error?.message)
     try {
       return await fetchUriAsDataUrl(uri, mime)
@@ -231,17 +236,35 @@ export async function extractChatTextFromImage(uri: string): Promise<string> {
     }
 
     const payloadString = JSON.stringify({ image: dataUrl });
+    if (payloadString.length > MAX_OCR_PAYLOAD_CHARS) {
+      throw new Error('Screenshot is too large. Please crop it or choose a smaller image.')
+    }
+
     console.log(`[AI] Sending OCR request to: ${BACKEND_URL}/api/ocr, payload length: ${payloadString.length}`);
-    const result = await fetch(`${BACKEND_URL}/api/ocr`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payloadString,
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), OCR_REQUEST_TIMEOUT_MS)
+    let result: Response
+
+    try {
+      result = await fetch(`${BACKEND_URL}/api/ocr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payloadString,
+        signal: controller.signal,
+      })
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('OCR request timed out. Please try again.')
+      }
+      throw error
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!result.ok) {
       const errorText = await result.text()
       console.error('[AI] OCR backend error:', result.status, errorText)
-      throw new Error(`OCR backend returned ${result.status}: ${errorText}`)
+      throw new Error(result.status >= 500 ? 'OCR service is unavailable. Please try again.' : `OCR failed: ${errorText}`)
     }
 
     const json = await result.json()

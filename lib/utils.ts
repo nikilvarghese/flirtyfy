@@ -42,7 +42,7 @@ export function formatRelativeDate(date: Date | string): string {
 }
 
 /**
- * Darken or lighten a hex colour by a given amount (−255 to +255).
+ * Darken or lighten a hex colour by a given amount (-255 to +255).
  * Negative values darken; positive values lighten.
  */
 export function adjustBrightness(hex: string, amount: number): string {
