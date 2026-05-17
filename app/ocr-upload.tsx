@@ -14,17 +14,10 @@ import { extractChatTextFromImage, generateDatingCopy } from '@/services/openai'
 import { ACCENT, ACCENT_DIM, ACCENT_BORDER, BORDER, SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '@/lib/theme'
 import { TONES } from '@/constants/flirtyfy'
 import { useToast } from '@/contexts/ToastContext'
+import { OCR_DEMO_DATA_URL } from '@/assets/ocr-demo-data'
 import type { Tone } from '@/types/flirtyfy'
 
 const OCR_DEMO_ASSET = require('../assets/ocr-demo.png')
-const OCR_DEMO_TEXT = `Person A: you're lowkey trouble 😭
-Person B: depends who's asking
-Person A: wow so mysterious
-Person B: mystery keeps life interesting
-Person A: or stressful
-Person B: only if you can't handle a little chaos
-Person A: so should I be worried? 👀
-Person B: probably a little 😏`
 
 function imagePickerDataUrl(asset: ImagePicker.ImagePickerAsset) {
   if (!asset.base64) {
@@ -105,13 +98,9 @@ export default function OcrUploadScreen() {
     await runOcrFlow({ uri: asset.uri }, imagePickerDataUrl(asset))
   }
 
-  function useDemoOcr() {
-    setPreviewSource(OCR_DEMO_ASSET)
-    setPreviewKey((current) => current + 1)
+  async function useDemoOcr() {
     setImageAspectRatio(0.58)
-    setText(OCR_DEMO_TEXT)
-    setTextFlashKey((current) => current + 1)
-    showToast('Demo chat loaded', 'success')
+    await runOcrFlow(OCR_DEMO_ASSET, OCR_DEMO_DATA_URL)
   }
 
   async function generate() {
